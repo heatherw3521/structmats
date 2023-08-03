@@ -6,6 +6,6 @@ This is an ongoing collection of direct solvers in MATLAB for solving systems in
 
 The software works with objects constructed in the HM-toolbox (see Massei, Robol, Kressner, 2019). Repo: https://github.com/numpi/hm-toolbox. 
 
-INSTRUCTIONS FOR SETTING UP PACKAGE are in ```setup.m```
+INSTRUCTIONS FOR SETTING UP PACKAGE WITH HM-TOOLBOX are in ```setup.m```
 
 
