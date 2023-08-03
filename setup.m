@@ -7,7 +7,8 @@
 % (1) Use a terminal to navigate to the directory you wish to install the toolbox. 
 % (2) Enter the following command: git clone https://github.com/numpi/hm-toolbox.git
 %
-% (3) In MATLAB, add the paths hm-toolbox/ and structmats/ to the working directory
+% (3) In MATLAB, add the paths hm-toolbox/ and structmats/ to the working
+% directory (with subfolders)
 % (4) Navigate to a parent folder that contains both the structmats directory and the 
 % hm-toolbox. From there, run this file. It will add to the toolbox some additional functions used by structmat. 
 %
