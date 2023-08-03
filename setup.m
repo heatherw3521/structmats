@@ -4,35 +4,33 @@
 % First, install the HM-toolbox via git: 
 % (1) Use a terminal to navigate to the directory you wish to install the toolbox. 
 % (2) Enter the following command: git clone https://github.com/numpi/hm-toolbox.git
+% (3) In MATLAB, add the paths hm-toolbox/ and structmats/ to the working directory
 %
-% Once the toolbox is added, navigate to the structmats folder and run this file. It will add the
-% appropriate path and also add to the toolbox some additional
-% functions used by structmat. 
+% (4) Navigate to a parent folder that
+% contains both the structmats directory and the hm-toolbox and run this file.
+% It will add to the toolbox some additional functions used by structmat. 
 %
 % YOU MAY NEED TO ALTER/UPDATE the filepaths in the 'copyfile' commands so that it finds the
 % correct location for the hm-toolbox on your machine. 
 %
 % WARNING: This file invokes a 'clear all, clear classes, clear functions' command. 
 
-%%
-addpath('hm-toolbox')
-addpath('structmats')
 
 %% set up fADI and URV functions: 
-copyfile('toolbox_addons\urv.m', 'hm-toolbox\@hss\urv.m')
-copyfile('toolbox_addons\urv_solve.m', 'hm-toolbox\urv_solve.m')
-copyfile('toolbox_addons\fADI_col.m', 'hm-toolbox\@hss\private\fADI_col.m')
-copyfile('toolbox_addons\fADI_row.m', 'hm-toolbox\@hss\private\fADI_row.m')
-copyfile('toolbox_addons\getshifts_adi.m', 'hm-toolbox\@hss\private\getshifts_adi.m')
-copyfile('toolbox_addons\hss_build_hss_tree_nudft.m', 'hm-toolbox\@hss\private\hss_build_hss_tree_nudft.m')
-copyfile('toolbox_addons\hss_cauchytoeplitz.m', 'hm-toolbox\@hss\private\hss_cauchytoeplitz.m')
-copyfile('toolbox_addons\hss_cauchytoeplitz2.m', 'hm-toolbox\@hss\private\hss_cauchytoeplitz2.m')
-copyfile('toolbox_addons\hss_nudftv.m', 'hm-toolbox\@hss\private\hss_nudftv.m')
-copyfile('toolbox_addons\hss_urv_fact.m', 'hm-toolbox\@hss\private\hss_urv_fact.m')
-copyfile('toolbox_addons\vbuildcauchydiags.m', 'hm-toolbox\@hss\private\vbuildcauchydiags.m')
-copyfile('toolbox_addons\vfADI_col.m', 'hm-toolbox\@hss\private\vfADI_col.m')
-copyfile('toolbox_addons\vfADI_row.m', 'hm-toolbox\@hss\private\vfADI_row.m')
-rmpath('toolbox_addons')
+copyfile('structmats\toolbox_addons\urv.m', 'hm-toolbox\@hss\urv.m')
+copyfile('structmats\toolbox_addons\urv_solve.m', 'hm-toolbox\urv_solve.m')
+copyfile('structmats\toolbox_addons\fADI_col.m', 'hm-toolbox\@hss\private\fADI_col.m')
+copyfile('structmats\toolbox_addons\fADI_row.m', 'hm-toolbox\@hss\private\fADI_row.m')
+copyfile('structmats\toolbox_addons\getshifts_adi.m', 'hm-toolbox\@hss\private\getshifts_adi.m')
+copyfile('structmats\toolbox_addons\hss_build_hss_tree_nudft.m', 'hm-toolbox\@hss\private\hss_build_hss_tree_nudft.m')
+copyfile('structmats\toolbox_addons\hss_cauchytoeplitz.m', 'hm-toolbox\@hss\private\hss_cauchytoeplitz.m')
+copyfile('structmats\toolbox_addons\hss_cauchytoeplitz2.m', 'hm-toolbox\@hss\private\hss_cauchytoeplitz2.m')
+copyfile('structmats\toolbox_addons\hss_nudftv.m', 'hm-toolbox\@hss\private\hss_nudftv.m')
+copyfile('structmats\toolbox_addons\hss_urv_fact.m', 'hm-toolbox\@hss\private\hss_urv_fact.m')
+copyfile('structmats\toolbox_addons\vbuildcauchydiags.m', 'hm-toolbox\@hss\private\vbuildcauchydiags.m')
+copyfile('structmats\toolbox_addons\vfADI_col.m', 'hm-toolbox\@hss\private\vfADI_col.m')
+copyfile('structmats\toolbox_addons\vfADI_row.m', 'hm-toolbox\@hss\private\vfADI_row.m')
+rmpath('structmats\toolbox_addons')
 %%
 %%modify the hss object class file. WARNING: This will delete and replace
 % the object class file for hm-toolbox\@hss\. It keeps all class attributes
