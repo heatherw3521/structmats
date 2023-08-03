@@ -22,7 +22,7 @@ function varargout = structsolv_nudft2(p,N,b, varargin)
 %%
 % convert to Vandermonde nodes, and then call NUDFT code
 ucnodes = exp(-2i*pi*p(:));
-varargout = INUDFT(ucnodes,N, b, varargin);
+varargout = INUDFT(ucnodes,N, b, varargin{:});
 varargout = varargout{:}; 
 end
 
