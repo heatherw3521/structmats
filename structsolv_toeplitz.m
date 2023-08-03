@@ -7,10 +7,7 @@ function out = structsolv_toeplitz(tc,tr, b, varargin)
 %
 % structsolv_toeplitz(tc,tr, b, 'tol', tol) sets accuracy to tol.
 % The default setting for tol is 1e-11. 
-%
-% structsolv_toeplitz(tc, tr, b, 's') uses a transformation that involves a 
-% singular displacement equation (see [2]). Otherwise, a nonsingular
-% displacement equation is used (see [1]). 
+% 
 %
 % NOTES: Currently, the Toeplitz solver is limited to square systems with
 % dimensions that are powers of 2. This will be remedied soon. 
@@ -23,9 +20,9 @@ function out = structsolv_toeplitz(tc,tr, b, varargin)
 % [2] Wilber, H.D. Ch. 4 in "Computing numerically with rational functions", 
 % PhD Dissertation, Cornell Univ., 2021.  
 
-if any(strcmpi(varargin{:}, 's'))
+if any(strcmpi(varargin{:}, 's')) %this is not yet ready. Will fail
     out = Toeplitz_solve(tc,tr, b, varargin);
-else
+else %this should be fine
     out = Toeplitz_solve_ns(tc,tr, b, varargin);
 end
 

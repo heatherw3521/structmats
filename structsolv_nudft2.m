@@ -1,5 +1,5 @@
 %structmat solver: 
-function out = structsolv_nudft2(p,N,b, varargin)
+function varargout = structsolv_nudft2(p,N,b, varargin)
 % solve a least squares problem Vx = b, where V is 1D type-II nonuniform DFT matrix,
 % i.e., V(j,k) = exp(-2i*pi*p(j)*(k-1))
 % p = locations on [0, 1] where signal is sampled.
@@ -22,7 +22,12 @@ function out = structsolv_nudft2(p,N,b, varargin)
 %%
 % convert to Vandermonde nodes, and then call NUDFT code
 ucnodes = exp(-2i*pi*p(:));
-out = INUDFT(ucnodes,N, b, varargin{:});
+if nargout==1
+    out = INUDFT(ucnodes,N, b, varargin{:});
+    varargout = {out};
+else
+    [L,p,x] = INUDFT(ucnodes,N, b, varargin{:});
+    varargout = {L,p,x};
 end
 
 

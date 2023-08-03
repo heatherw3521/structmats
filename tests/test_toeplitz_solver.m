@@ -3,7 +3,7 @@
 
 % simple experiment to see if Toeplitz_solve wrapper works:
 clear all
-n = 2^10+45;   % fails for 1e3, ie non-powers-of-2 ?
+n = 2^10;   % fails for 1e3, ie non-powers-of-2 ?
 testcomplex = 0;     % plain solver fails for 1, "ns" version works
 tr = rand(n,1);
 tc = rand(n,1);
