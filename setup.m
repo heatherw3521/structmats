@@ -1,5 +1,6 @@
 %Instructions for seting up HM-toolbox and creating add-ons for it. 
-% This is required to run the structmat solvers. 
+% This is required to set up the structmat solvers. It should be run only 
+% once. 
 %
 % Once you have installed the structmat directory, do the following: 
 %
@@ -16,7 +17,10 @@
 % YOU MAY NEED TO ALTER/UPDATE the filepaths in the 'copyfile' commands so that it finds the
 % correct location for the hm-toolbox on your machine. 
 %
-% WARNING: This file invokes a 'clear all, clear classes, clear functions' command. 
+% WARNING: This file invokes a 'clear all, clear classes, clear functions' command.
+%
+% Once this setup is complete, it will remove toolbox_addons from the
+% structmat file. This directory can be safely deleted to avoid confusion. 
 
 
 %% set up fADI and URV functions: 
@@ -60,6 +64,7 @@ catch
 end
 if ~fail
     fprintf('Installation appears to be successful. Fair warning, this package is in the early days of construction!')
+    rmpath('toolbox_addons')
 end
 
 

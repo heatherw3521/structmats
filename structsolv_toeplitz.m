@@ -1,6 +1,6 @@
 %structmat solver: 
 function out = structsolv_toeplitz(tc,tr, b, varargin)
-%solve a linear system Tx = b, where T is Toeplitz. 
+% solve a linear system Tx = b, where T is Toeplitz. 
 % tc = first col of T
 % tr = first row of T
 % b = right-hand side
@@ -20,7 +20,7 @@ function out = structsolv_toeplitz(tc,tr, b, varargin)
 % [2] Wilber, H.D. Ch. 4 in "Computing numerically with rational functions", 
 % PhD Dissertation, Cornell Univ., 2021.  
 
-if any(strcmpi(varargin{:}, 's')) %this is not yet ready. Will fail
+if any(strcmpi('s',varargin)) %this is not yet ready. Will fail
     out = Toeplitz_solve(tc,tr, b, varargin);
 else %this should be fine
     out = Toeplitz_solve_ns(tc,tr, b, varargin);

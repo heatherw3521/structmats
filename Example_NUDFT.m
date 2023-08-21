@@ -27,10 +27,13 @@ norm(V*x-b)./norm(b)
 x = structsolv_nudft2(p, n, b, 'tol', 1e-6);
 norm(V*x-b)/norm(b)
 
+%%
 % If you need to solve VX = B, where B is a collection of multiple right
 % hand sides, solve for a subset of RHSs, and prefactor and save the factorization information. 
 % This can then be applied to additional RHSs with the INUDFT_solve
 % function as below: (TO DO: add automatic functionality for multiple RHS)
+XX = rand(n,5);
+B = V*XX;
 
 [L, P, x] = structsolv_nudft2(p, n, B(:,1), 'tol', 1e-6); % L is a factorization obj. 
 % P is permutation information related to the construction of L. 
