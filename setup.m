@@ -20,7 +20,8 @@
 % WARNING: This file invokes a 'clear all, clear classes, clear functions' command.
 %
 % Once this setup is complete, it will remove toolbox_addons from the
-% structmat file. This directory can then be safely deleted to avoid confusion. 
+% path. toolbox_addons can then be safely deleted to avoid confusion; it 
+% can cause problems if it is on the path.
 %
 % Check out structmats/Examples_Solvers.m for examples on how to get
 % started!
@@ -54,7 +55,7 @@ copyfile('structmats\toolbox_addons\hss.m', 'hm-toolbox\@hss\hss.m')
 clear classes
 clear functions
 clear all
-
+rmpath('structmats\toolbox_addons\')
 %% does it work? (more thorough tests to come)
 
 nodes = rand(2050,1); modes = 1000; rhs = rand(2050,1);
@@ -66,8 +67,7 @@ catch
     error('Installation failed.')
 end
 if ~fail
-    fprintf('Installation appears to be successful. Fair warning, this package is in the early days of construction!')
-    rmpath('structmats\toolbox_addons\')
+    fprintf('Installation successful. Fair warning, this package is in the early days of construction! \n')    
 end
 
 
