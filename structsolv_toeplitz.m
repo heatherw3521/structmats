@@ -1,5 +1,5 @@
 %structmat solver: 
-function out = structsolv_toeplitz(tc,tr, b, varargin)
+function varargout = structsolv_toeplitz(tc,tr, b, varargin)
 % solve a linear system Tx = b, where T is Toeplitz. 
 % tc = first col of T
 % tr = first row of T
@@ -9,8 +9,8 @@ function out = structsolv_toeplitz(tc,tr, b, varargin)
 % The default setting for tol is 1e-11. 
 % 
 %
-% NOTES: Currently, the Toeplitz solver is limited to square systems with
-% dimensions that are powers of 2. This will be remedied soon. 
+% NOTES: Currently, the Toeplitz solver is limited to square systems. 
+% This will be remedied soon. 
 
 % References: 
 % [1] Xia, Xi, Gu. "A Superfast Structured Solver
@@ -20,10 +20,22 @@ function out = structsolv_toeplitz(tc,tr, b, varargin)
 % [2] Wilber, H.D. Ch. 4 in "Computing numerically with rational functions", 
 % PhD Dissertation, Cornell Univ., 2021.  
 
+
+%for now restrict to square: 
+if ~(length(tc)==length(tr)) 
+    error("error: for now, we only support square Toeplitz matrices.")
+end
+
 if any(strcmpi('s',varargin)) %this is not yet ready. Will fail
-    out = Toeplitz_solve(tc,tr, b, varargin);
+    out = Toeps_sing(tc,tr, b, varargin{:});
 else %this should be fine
-    out = Toeplitz_solve_ns(tc,tr, b, varargin);
+    if nargout ==1
+        out = Toeps(tc,tr, b, varargin{:});
+        varargout = {out};
+    else
+        [L, x] = Toeps(tc,tr, b, varargin{:});
+        varargout = {L,x};
+    end
 end
 
 end

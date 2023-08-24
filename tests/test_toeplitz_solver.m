@@ -1,7 +1,7 @@
-% basic Toeplitz solver tests
-
+% basic Toeplitz solver test
+% for now, the Toeplitz matrix must be square
 clear all
-n = 2^10 ;   % pick non power of 2
+n = 2^10 +47 ;   
 testcomplex = 1;     
 tr = rand(n,1);
 tc = rand(n,1);
@@ -14,12 +14,8 @@ b = T*x;
 tol = 1e-10; 
 
 %%
-
-%%
-% try the nonsingular version: 
+% try the solver: 
 xns = structsolv_toeplitz(tc, tr,b,'tol',tol );
-%xns = Toeplitz_solve_ns(tc,tr,b, 'tol', tol);
-
 norm(x-xns)/norm(x)
 
 

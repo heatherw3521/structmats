@@ -5,6 +5,8 @@ function X = INUDFT_solve(L,p,B)
 % Example: First call [L, ~] = INUDFT(nodes, n, b1); to produce L, where 
 % nodes define A and A is m by n. 
 % Now solve system AX = B with X = INUDFT_solve(L,p, B); 
+%
+% TO DO: Optimize urv_solve wrt BLAS3 ops
 
 B = B(p,:);
 [~,s] = size(B);

@@ -1,4 +1,4 @@
-function x = Toeplitz_solve_ns(tc,tr, b, varargin)
+function varargout = Toeps(tc,tr, b, varargin)
 % Solves the equation Tx =b, where T = toeplitz(tc, tr).
 % using the nonsingular version of the disp struct
 % Toeplitz_solve_ns(tc, tr, b, 'tol', tol) sets a tolerance parameter.
@@ -21,9 +21,9 @@ block_size = 128;
 
 %% Part 1: transform to Cauchy system: 
 
-if ~(log2(n)==floor(log2(n)))
-    error('For now, size of Toeplitz matrix must be a power of 2')
-end
+%if ~(log2(n)==floor(log2(n)))
+%    error('For now, size of Toeplitz matrix must be a power of 2')
+%end
 N = (1:n).'; 
 w = exp(pi*1i/n); 
 
@@ -53,12 +53,17 @@ warning on
 end
 %% Part 3: solve Cauchy-like system
 
-x = H\b; 
+%x = H\b; 
+L = urv(H); 
+x = urv_solve(L,b);
 
 %% Part 4:
 % transform x back: 
-
-x = D0*fft(x)/sqrt(n);  
- 
+if nargout==1
+    varargout = {D0*fft(x)/sqrt(n)};  
+else
+    x = D0*fft(x)/sqrt(n);
+    varargout = {L,x};
+end
 end
 
