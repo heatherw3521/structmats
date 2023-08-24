@@ -20,7 +20,10 @@
 % WARNING: This file invokes a 'clear all, clear classes, clear functions' command.
 %
 % Once this setup is complete, it will remove toolbox_addons from the
-% structmat file. This directory can be safely deleted to avoid confusion. 
+% structmat file. This directory can then be safely deleted to avoid confusion. 
+%
+% Check out structmats/Examples_Solvers.m for examples on how to get
+% started!
 
 
 %% set up fADI and URV functions: 
@@ -38,7 +41,7 @@ copyfile('structmats\toolbox_addons\vbuildcauchydiags.m', 'hm-toolbox\@hss\priva
 copyfile('structmats\toolbox_addons\vfADI_col.m', 'hm-toolbox\@hss\private\vfADI_col.m')
 copyfile('structmats\toolbox_addons\vfADI_row.m', 'hm-toolbox\@hss\private\vfADI_row.m')
 copyfile('structmats\toolbox_addons\hss_urv_fact_solve.m', 'hm-toolbox\private\hss_urv_fact_solve.m')
-rmpath('structmats\toolbox_addons\')
+
 %%
 %%modify the hss object class file. WARNING: This will delete and replace
 % the object class file for hm-toolbox\@hss\. It keeps all class attributes
@@ -64,7 +67,7 @@ catch
 end
 if ~fail
     fprintf('Installation appears to be successful. Fair warning, this package is in the early days of construction!')
-    rmpath('toolbox_addons')
+    rmpath('structmats\toolbox_addons\')
 end
 
 

@@ -1,4 +1,4 @@
-function X = Toep_solve(L,B)
+function X = toeplitz_solve(L,B)
 %solves TX = B where L stores urv factorization for the transformed 
 % Toeplitz matrix T.  B is multiple RHS. 
 %

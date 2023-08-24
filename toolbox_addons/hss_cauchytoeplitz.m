@@ -40,7 +40,7 @@ end
 %% Build tree
 
 % Prepare the tree for the HSS structure -- leaving all the blocks empty:
-H = hss_build_hss_tree(N, N, block_size);
+H = hss_build_hss_tree(N, N, block_size, [], []);
 
 %build the HSS representation recursively:
 H = BuildHSS_iter(H, tol, 0, 0, N, G, L);

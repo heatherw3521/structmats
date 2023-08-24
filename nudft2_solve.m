@@ -1,4 +1,4 @@
-function X = INUDFT_solve(L,p,B)
+function X = nudft2_solve(L,p,B)
 %solves VX = B where L stores permuted urv factorization for the transformed 
 %matrix V. p is the permutation info.  B is multiple RHS. 
 %

@@ -4,7 +4,8 @@
 % matrices with special displacement structures. These examples show how to
 % use the code as it currently exists.
 %
-% This example file is for systems involving type II non-uniform DFT matrices.
+% This example file is for systems involving type II non-uniform 
+% discrete Fourier transform matrices.
 %%
 % Non-uniform type-II DFT matrix: Solve Vx = b, where
 % 
@@ -23,26 +24,33 @@ x = structsolv_nudft2(p, n, b);
 % check residual: 
 norm(V*x-b)./norm(b)
 %%
-% solve with structmat, add tol: 
+% solve with structmat, add tol parameter: 
 x = structsolv_nudft2(p, n, b, 'tol', 1e-6);
 norm(V*x-b)/norm(b)
 
-%%
-% If you need to solve VX = B, where B is a collection of multiple right
-% hand sides, solve for a subset of RHSs, and prefactor and save the factorization information. 
-% This can then be applied to additional RHSs with the INUDFT_solve
-% function as below: (TO DO: add automatic functionality for multiple RHS)
+%% Multiple RHS
+% To solve VX = B, where B is a collection of multiple right
+% hand sides: First, solve for a subset of RHSs) and save the factorization 
+% information. 
+%
+% Here's an example showing how to do that:
 XX = rand(n,5);
-B = V*XX;
+B = V*XX; 
 
-[L, P, x] = structsolv_nudft2(p, n, B(:,1), 'tol', 1e-6); % L is a factorization obj. 
+[L, P, x] = structsolv_nudft2(p, n, B(:,1), 'tol', 1e-6); 
+% L is a factorization obj. 
 % P is permutation information related to the construction of L. 
 
-X = INUDFT_solve(L,P,B(:,2:end)); %applies the prefactored URV factorization to solve for new RHSs. 
-norm(V*X - B(:,2:end))/norm(B(:,2:end))
+%%
+% Now that we have the factorization information, we can apply it to 
+% additional RHSs with the 'nudft2_solve' command: 
+
+X = nudft2_solve(L,P,B(:,2:end)); 
 
 %%
-% TO DO: add in solver for the normal equations
+norm(V*X - B(:,2:end))/norm(B(:,2:end))
+
+
 
 
 
