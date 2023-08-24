@@ -1,4 +1,6 @@
 # structmats
+INSTRUCTIONS FOR SETTING UP PACKAGE WITH HM-TOOLBOX are in ```setup.m```
+
 Computing with Vandermonde, Toeplitz, Hankel and other matrices that have special displacement structures:
 For now, the repo is limited. It includes solvers for Toeplitz and type-II nonuniform discrete Fourier transform problems. We will be working on expansions, but please contact me if you have a special request. 
 
@@ -6,6 +8,6 @@ This is an ongoing collection of direct solvers in MATLAB for solving systems in
 
 The software works with objects constructed in the HM-toolbox (see Massei, Robol, Kressner, 2019). Repo: https://github.com/numpi/hm-toolbox. 
 
-INSTRUCTIONS FOR SETTING UP PACKAGE WITH HM-TOOLBOX are in ```setup.m```
+
 
 
