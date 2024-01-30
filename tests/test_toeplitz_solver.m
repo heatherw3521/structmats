@@ -24,7 +24,7 @@ Xt = rand(n, 5);
 B = T*Xt; 
 %%
 [L,~] = structsolv_toeplitz(tc, tr, B(:,1), 'tol', tol); 
-X = toeplitz_solve(L, B); 
+X = Toep_solve(L, B); 
 norm(Xt-X)
 
 

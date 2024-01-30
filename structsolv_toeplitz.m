@@ -9,7 +9,8 @@ function varargout = structsolv_toeplitz(tc,tr, b, varargin)
 % The default setting for tol is 1e-11. 
 % 
 %
-% NOTES: Currently, the Toeplitz solver is limited to square systems. 
+% NOTES: Currently, the Toeplitz solver is limited to square systems
+% and seems to fail for certain sizes (powers of 2 should work)
 % This will be remedied soon. 
 
 % References: 
