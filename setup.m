@@ -42,6 +42,7 @@ copyfile('structmats\toolbox_addons\vbuildcauchydiags.m', 'hm-toolbox\@hss\priva
 copyfile('structmats\toolbox_addons\vfADI_col.m', 'hm-toolbox\@hss\private\vfADI_col.m')
 copyfile('structmats\toolbox_addons\vfADI_row.m', 'hm-toolbox\@hss\private\vfADI_row.m')
 copyfile('structmats\toolbox_addons\hss_urv_fact_solve.m', 'hm-toolbox\private\hss_urv_fact_solve.m')
+copyfile('structmats\toolbox_addons\mobiusT.m', 'hm-toolbox\private\mobiusT.m')
 
 %%
 %%modify the hss object class file. WARNING: This will delete and replace
