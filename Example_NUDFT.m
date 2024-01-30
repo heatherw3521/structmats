@@ -10,7 +10,7 @@
 % Non-uniform type-II DFT matrix: Solve Vx = b, where
 % 
 %  V is a vandermonde matrix with V(j,k) = exp(-2i*pi*p(j)*(k-1)). 
-
+%
 % set up the problem: 
 n = 1024; % number of modes
 m = 2*n; 

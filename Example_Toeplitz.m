@@ -3,7 +3,8 @@
 %
 % set up a Toeplitz matrix:
 clear all
-n = 2^12;    
+%n = 2^12;   
+n = 1e4; 
 tr = rand(n,1) + 1i*rand(n,1);
 tc = rand(n,1) + 1i*rand(n,1); tc(1)= tr(1); 
 T = toeplitz(tc, tr); 

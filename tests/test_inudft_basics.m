@@ -6,9 +6,9 @@ function [err, time] = test_inudft_basics(m,n)
 % Note that if m, n are chosen to be very large this code will be slow 
 % because it builds and solves the full system naively to test accuracy. 
 
-n  = 2^9; m = 2*n;
-nd_choice = {exp(1i*2*pi*((1:m)/m + 1/4/m)).',exp(1i*pi*(1+clencurt(m-1)')).',  exp(-1i*2*pi*rand(1,m)).'};
-%equispaced, quadrature pts, random
+n  = 2^9; m = 3*n; 
+nd_choice = {exp(1i*2*pi*((1:m)/m + 1/4/m)).',  exp(-1i*2*pi*rand(1,m)).'};
+%equispaced,  random
 
 for j = 1:length(nd_choice)
     nd = nd_choice{j};

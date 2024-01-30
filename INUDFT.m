@@ -11,7 +11,7 @@ function varargout = INUDFT(nodes,n, b, varargin)
 % of V, and p, the permutation information, as well as the solution x.
 
 
-% This is a wrapper for @hss/private/hss_nudftv
+% This is a wrapper for @hss/private/hss_cauchy_INUFFT
 
 %%
 % we start with a square matrix
@@ -62,14 +62,17 @@ v = w.^(-(1:n)*(2*n-1)); v = v/sqrt(n);
 % call the hss constructor: 
 warning off
 H = hss('nudft', nodes, a, v,n,'tol', tol);
-warning on
+%figure()
+%spy(H)
+%title(['tol is ',num2str(tol)])
+
 %%
 %V = nodes.^(0:n-1);
 %C = (ft(V'))';
 
 %%
 % solve linear system
-b = b(p);
+b = b(p,:);
 L = urv(H); 
 x = urv_solve(L,b);
 if nargout ==1

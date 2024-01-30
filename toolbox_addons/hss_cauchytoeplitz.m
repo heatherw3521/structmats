@@ -15,10 +15,8 @@ function H = hss_cauchytoeplitz(N,G, L, varargin)
 
 % TO DO (to further optimize): 
 % 1) add ULV-like solver, 
-% 2) pull out of toolbox, save on storage by not building the HSS
-% blocks until they are needed in the solver. 
-% 3) replace fadi subroutine with mex to code fadi in C
-% 4) create option for using Hadamard product + cauchy (cauchy HSS factorization 
+% 2) replace fadi subroutine with mex to code fadi in C
+% 3) create option for using Hadamard product + cauchy (cauchy HSS factorization 
 % is a precomputation that works for all T). 
 
 
@@ -26,6 +24,11 @@ function H = hss_cauchytoeplitz(N,G, L, varargin)
 % References: [1] Xia, Xi, Gu. "A Superfast Structured Solver
 % for Toeplitz Linear Systems via Randomized Sampling."
 % SIMAX, Vol. 33 No 3, p.837-858, 2012.
+%
+% [2] Wilber, Heather. "Computing numerically with rational functions." 
+% see Ch. 4. 
+
+%%%
  
 block_size = 128; %smallest blocks. %TO DO: adjust this to tol; 
 tol = hssoption('threshold'); %rel tol. 
@@ -40,7 +43,7 @@ end
 %% Build tree
 
 % Prepare the tree for the HSS structure -- leaving all the blocks empty:
-H = hss_build_hss_tree(N, N, block_size, [], []);
+H = hss_build_hss_tree(N, N, block_size);
 
 %build the HSS representation recursively:
 H = BuildHSS_iter(H, tol, 0, 0, N, G, L);

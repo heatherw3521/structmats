@@ -43,7 +43,8 @@ if A.topnode
 end
 
 if size(U, 1) >= size([U D], 2)
-    [F.Om,tmp] = qr([U D]);
+    %[F.Om,tmp] = qr([U D]);
+    [F.Om,tmp] = qr([U D],"econ");
     k = min(size([U D])); l = size(U,2);
     U = tmp(1:k,1:l);
     D = tmp(1:k,l+1:end);
