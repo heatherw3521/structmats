@@ -41,7 +41,7 @@ classdef toeplitzmat
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% CLASS PROPERTIES
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    properties (Access = public)
+    properties (GetAccess = public, SetAccess = private)
         % 'tc', 'tr' are the first column and first row, respectively
         tc 
         tr
