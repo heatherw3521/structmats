@@ -14,7 +14,7 @@ elseif ( ~isa(g,'toeplitzmat') ) % TOEPLITZMAT .* ???
         ['Undefined function ''times'' for input arguments of type %s ' ...
         'and %s.'], class(T), class(g));
  
-else                           % TOEPLITZMAT + TOEPLITZMAT
+else                           % TOEPLITZMAT .* TOEPLITZMAT
     %Size check
     if( ~isequal(size(T), size(g)) )
         error( 'TOEPLITZMAT:times:sizemismatch', ...
