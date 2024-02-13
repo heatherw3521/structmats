@@ -12,5 +12,6 @@ if(~islogical(T))
 end
 
 % little hack because I'm too lazy to change toepcompare
-h = toepcompare(T, 1, @(x,y) ~x, "~");
+ftest = @(x) true;
+h = toepcompare(T, 1, @(x,y) ~x, "~", ftest);
 end

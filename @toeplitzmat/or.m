@@ -15,5 +15,6 @@ if(~islogical(T) || ~islogical(g))
         class(T.tc), classg);
 end
 
-h = toepcompare(T, g, @(x,y) x | y, "|");
+ftest = @(x) (islogical(x)&&~isa(x,'toeplitzmat'));
+h = toepcompare(T, g, @(x,y) x | y, "|", ftest);
 end
