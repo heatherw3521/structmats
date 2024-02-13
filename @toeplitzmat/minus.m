@@ -4,10 +4,7 @@ function h = minus(T, g)
 %  T and g can be scalars or TOEPLITZMATs
 
 if ( ~isa(T, 'toeplitzmat') ) % ??? - TOEPLITZMAT
-    h = minus(g, T);
-
-elseif ( isempty(g) ) % TOEPLITZMAT - []
-    h = T;
+    h = -minus(g, T);
 
 elseif ( isa(g,'double') ) % TOEPLITZMAT + DOUBLE
     h = toeplitzmat(T.tc - g, T.tr - g);
@@ -17,7 +14,7 @@ elseif ( ~isa(g,'toeplitzmat') ) % TOEPLITZMAT + ???
         ['Undefined function ''minus'' for input arguments of type %s ' ...
         'and %s.'], class(T), class(g));
  
-else                           % TOEPLITZMAT + TOEPLITZMAT
+else                           % TOEPLITZMAT - TOEPLITZMAT
     %Size check
     if( ~isequal(size(T), size(g)) )
         error( 'TOEPLITZMAT:minus:sizemismatch', ...
