@@ -1,6 +1,7 @@
 function h = plus(T, g)
 %+   Plus for TOEPLITZMAT objects
-%  F + G adds F and G. F and G can be scalars, TOEPLITZMAT, or matrices
+%  T + g adds T and g. 
+%  T and g can be scalars or TOEPLITZMATs
 
 if ( ~isa(T, 'toeplitzmat') ) % ??? + TOEPLITZMAT
     h = plus(g, T);
