@@ -24,14 +24,13 @@ classdef toeplitzmat
     %% CLASS CONSTRUCTOR:
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     methods ( Access = public, Static = false )
-
         function T = toeplitzmat(varargin)
             % The main toeplitzmat constructor!
             
             % Error out if no arguments given
             if ( (nargin == 0) )
                 error('STRUCTMATS:TOEPLITZMAT:constructor:none', ...
-                'attempted to construct Toeplitz matrix with no inputs');
+                'Cannot construct a Toeplitz matrix with no inputs');
             end
             % Call the constructor, all the work is done here:
             T = constructor(T, varargin{:});       
