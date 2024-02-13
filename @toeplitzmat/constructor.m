@@ -15,10 +15,10 @@ function T = constructor(T, varargin)
     tc = varargin{1};
     tr = varargin{2};
     
-    % Error case - wrong input types
-    if( ~isa(tc, 'double') || ~isa(tr, 'double') )
+    % Error case - bad input pair types
+    if( (~isnumeric(tc) && ~islogical(tc)) || ~isa(tr, class(tc)))
         error('STRUCTMATS:TOEPLITZMAT:constructor:inputtypemismatch', ...
-                ['Inputs are of type %s and %s, but should both be of type double.'],...
+                ['Inputs pair of types %s and %s is not supported for TOEPLITZMAT.'],...
                 class(tc), class(tr));
     end
     
