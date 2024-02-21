@@ -1,6 +1,5 @@
 function v = ctranspose(T)
-%CTRANSPOSE for Toeplitz matrices
-%   Complex Conjugate Transpose
+%CTRANSPOSE Conjugate Transpose for TOEPLITZMAT objects
     v = toeplitzmat(T.tr',T.tc');
 end
 
