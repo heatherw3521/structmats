@@ -10,8 +10,11 @@ elseif ( isempty(g) ) % TOEPLITZMAT + []
     h = T;
 
 elseif ( isa(g,'double') ) % TOEPLITZMAT + DOUBLE
-    h = toeplitzmat(T.tc + g, T.tr + g);
-
+    if(isscalar(g)) %adding a number
+        h = toeplitzmat(T.tc + g, T.tr + g);
+    else %adding a matrix
+        h = g+toeplitz(T.tc,T.tr);
+    end
 elseif ( ~isa(g,'toeplitzmat') ) % TOEPLITZMAT + ???
     error( 'TOEPLITZMAT:plus:unknown', ...
         ['Undefined function ''plus'' for input arguments of type %s ' ...

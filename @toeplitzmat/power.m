@@ -3,13 +3,22 @@ function h = power(T, g)
 %  T .^ g raies T to the g, pointwise. 
 %  T and g can be scalars or TOEPLITZMATs
 
-if ( ~isa(T, 'toeplitzmat') ) % ??? .^ TOEPLITZMAT
-    h = power(g, T);
+if ( isa(T, 'double') ) % DOUBLE .^ TOEPLITZMAT
+    if(isscalar(T)) %exponentiating to a number
+        h = toeplitzmat(g.tc .^ T, g.tr .^ T);
+    else %exponentiating to a matrix
+        h = toeplitz(g.tc,g.tr) .^ T;
+    end
 
 elseif ( isa(g,'double') ) % TOEPLITZMAT .^ DOUBLE
-    h = toeplitzmat(T.tc .^ g, T.tr .^ g);
+    if(isscalar(g)) %exponentiating to a number
+        h = toeplitzmat(T.tc .^ g, T.tr .^ g);
+    else %exponentiating to a matrix
+        h = toeplitz(T.tc,T.tr) .^ g;
+    end
 
-elseif ( ~isa(g,'toeplitzmat') ) % TOEPLITZMAT .^ ???
+% TOEPLITZMAT ./ ??? or ??? ./ TOEPLITZMAT
+elseif ( ~isa(g,'toeplitzmat') || ~isa(T,'toeplitzmat'))
     error( 'TOEPLITZMAT:power:unknown', ...
         ['Undefined function ''power'' for input arguments of type %s ' ...
         'and %s.'], class(T), class(g));

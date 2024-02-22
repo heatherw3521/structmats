@@ -7,7 +7,11 @@ if ( ~isa(T, 'toeplitzmat') ) % ??? .* TOEPLITZMAT
     h = times(g, T);
 
 elseif ( isa(g,'double') ) % TOEPLITZMAT .* DOUBLE
-    h = toeplitzmat(T.tc * g, T.tr * g);
+    if(isscalar(g)) %times a number
+        h = toeplitzmat(T.tc .* g, T.tr .* g);
+    else %times a matrix
+        h = toeplitz(T.tc,T.tr) .* g;
+    end
 
 elseif ( ~isa(g,'toeplitzmat') ) % TOEPLITZMAT .* ???
     error( 'TOEPLITZMAT:times:unknown', ...

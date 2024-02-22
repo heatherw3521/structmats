@@ -4,10 +4,18 @@ function h = rdivide(T, g)
 %   T and g can be scalars or TOEPLITZMATs
 
 if ( isa(T, 'double') ) % DOUBLE ./ TOEPLITZMAT
-    h = toeplitzmat(T ./ g.tc, T ./ g.tr);
+    if(isscalar(T)) %dividng by a number
+        h = toeplitzmat(g.tc ./ T, g.tr ./ T);
+    else %dividing by a matrix
+        h = toeplitz(g.tc,g.tr) .^ T;
+    end
 
 elseif ( isa(g,'double') ) % TOEPLITZMAT ./ DOUBLE
-    h = toeplitzmat(T.tc ./ g, T.tr ./ g);
+    if(isscalar(g)) %dividing by a number
+        h = toeplitzmat(T.tc ./ g, T.tr ./ g);
+    else %dividing by a matrix
+        h = toeplitz(T.tc,T.tr) ./ g;
+    end
 
 % TOEPLITZMAT ./ ??? or ??? ./ TOEPLITZMAT
 elseif ( ~isa(g,'toeplitzmat') || ~isa(T,'toeplitzmat') )
