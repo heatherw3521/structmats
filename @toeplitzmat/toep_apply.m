@@ -6,7 +6,7 @@ function h = toep_apply(f, ftest, fname, T, G)
 
 % CASE: Two Toeplitzmat Objects
 if( isa(T, 'toeplitzmat') && isa(G, 'toeplitzmat'))
-    %Size check
+    % Fit check
     if( ~isequal(size(T), size(G)) )
         error( 'TOEPLITZMAT:%s:sizemismatch', fname, ...
             'Cannot %s Toeplitz matrices of sizes %s -by- %s and %s -by- %s.',...
@@ -30,7 +30,8 @@ elseif ( ftest(T) ) % ftype f TOEPLITZMAT
     
 % ERROR CASE: Unsupported type    
 else % Operation with unsupported type
-    error( "TOEPLITZMAT:"+fname+":unknown",...
+    errid = char("TOEPLITZMAT:"+fname+":unsupportedtype"); 
+    error( errid, ...
         ['Undefined function ''%s'' for input arguments of type %s ' ...
         'and %s.'], fname, class(T), class(G));
 end

@@ -1,31 +1,9 @@
-function h = minus(T, g)
+function h = minus(T, G)
 %-  Minus for TOEPLITZMAT objects
-%  T - g subtracts g from T. 
-%  T and g can be scalars or TOEPLITZMATs
+%  T - G subtracts G from T. 
+%  T and G can be scalars or matrices or TOEPLITZMATs
 
-if ( ~isa(T, 'toeplitzmat') ) % ??? - TOEPLITZMAT
-    h = -minus(g, T);
-
-elseif ( isa(g,'double') ) % TOEPLITZMAT + DOUBLE
-    if(isscalar(g)) %adding a number
-        h = toeplitzmat(T.tc - g, T.tr - g);
-    else %adding a matrix
-        h = toeplitz(T.tc,T.tr)-g;
-    end
-
-elseif ( ~isa(g,'toeplitzmat') ) % TOEPLITZMAT + ???
-    error( 'TOEPLITZMAT:minus:unknown', ...
-        ['Undefined function ''minus'' for input arguments of type %s ' ...
-        'and %s.'], class(T), class(g));
- 
-else                           % TOEPLITZMAT - TOEPLITZMAT
-    %Size check
-    if( ~isequal(size(T), size(g)) )
-        error( 'TOEPLITZMAT:minus:sizemismatch', ...
-            'Cannot subtract Toeplitz matrices of sizes %s -by- %s and %s -by- %s.',...
-            ""+size(T.tc,1),""+size(T.tc,2), ""+size(g.tc,1),""+size(g.tr,2) );       
-    end
-    
-    h = toeplitzmat(T.tc - g.tc, T.tr - g.tr);
+ftest = @(x) (isnumeric(x) || islogical(x));
+h = toep_apply(@(x,y) x - y, ftest, "-", T, G);
 end
 
