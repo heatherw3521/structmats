@@ -19,13 +19,13 @@ elseif ( ftest(G) ) % TOEPLITZMAT f ftype
     if( isscalar(G) )
         h = toeplitzmat(f(T.tc,G), f(T.tc,G));
     else
-        h = f(toeplitz(T.tc,T.tr), G);
+        h = f(toeplitz(T), G);
     end
 elseif ( ftest(T) ) % ftype f TOEPLITZMAT
     if( isscalar(T) )
         h = toeplitzmat(f(T,G.tc), f(T,G.tr));
     else
-        h = f(T, toeplitz(G.tc,G.tr));
+        h = f(T, toeplitz(G));
     end
     
 % ERROR CASE: Unsupported type    
