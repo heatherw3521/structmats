@@ -1,16 +1,16 @@
-function h = subsref(T, S)
+function h = subsref(H, S)
 %SUBSREF gets the part of a Toeplitzmat object by referenced subscript.
 %   The result may or may not itself be Toeplitz
 
 if(isequal(S(1).type, '{}'))
-    error( "TOEPLITZMAT:subsref:unsupportedtype", ...
-        'Subindexing with {} unsupported for TOEPLITZMAT.');
+    error( "HANKELMAT:subsref:unsupportedtype", ...
+        'Subindexing with {} unsupported for HANKELMAT.');
 end
 
 % SOME WEIRD STUFF WAS HAPPENING, this was the fix
 % TODO: figure out if this is truly needed
 if(S(1).type == '.')
-    h = builtin('subsref',T,S(1));
+    h = builtin('subsref',H,S(1));
     if(size(S,2) >= 2)
         h = subsref(h, S(2:end));
     end
@@ -18,13 +18,13 @@ if(S(1).type == '.')
 end
 
 % Get dimensions of T
-M = size(T,1); 
-N = size(T,2);
+M = size(H,1); 
+N = size(H,2);
 
 mi = S.subs{1}; % Row Indexing
 if size(S.subs,2) == 1 % Select rows from the first column
-    c = T.tc(mi);
-    h = toeplitzmat(c, c(1) ); % This will be a vector
+    c = H.hc(mi);
+    h = hankelmat(c, c(end) ); % This will be a vector
     return;
 end
 m = size(mi,2);
@@ -35,7 +35,7 @@ n = size(ni,2);
 % Simplification cases
 consecm = false; consecn = false;
 if(isequal(mi,':') && isequal(ni,':'))
-    h = T; return;
+    h = H; return;
 elseif(isequal(mi,':'))
     mi = 1:M; m = M;
     consecm = true;
@@ -44,12 +44,9 @@ elseif(isequal(ni,':'))
     consecn = true;
 end
 
-% quick hack, helps map rows and cols
-getcr = @(i,j) (j>=i) .* T.tr(min(abs(j-i)+1,N)) + (j<i).*T.tc(min(abs(i-j)+1,M))';
-
 if(n==1) % Select rows from the ni(1)-th column
     c = getcr(mi, ni(1));
-    h = toeplitzmat(c, c(1)); % This will be a vector
+    h = hankelmat(c, c(1)); % This will be a vector
     return;
 end
 
@@ -62,32 +59,32 @@ consec = @(ki) isequal(ki, ki(1):ki(end));
 consecm = consecm || consec(mi); % should short circuit for efficiency!
 consecn = consecn || consec(ni);
 
-res_toeps = consecm && consecn; % Ininital check
-if(~res_toeps) % Deeper check - if needed
-    res_toeps = true;
+res_hank = consecm && consecn; % Ininital check
+if(~res_hank) % Deeper check - if needed
+    res_hank = true;
     for j = -m+2:n-2
-        % Get the length of the diagonal then get the diagonal
+        % Get the length of the anti-diagonal then get the anti-diagonal
         if(j <= 0)
             K = min(m+j,n);
-            dj = mi(1-j:K-j)-ni(1:K);
+            dj = mi(1-j:K-j)+ni(1:K);
         else
             K = min(m,n-j);
-            dj = mi(1:K)-ni(1+j:j+K);
+            dj = mi(1:K)+ni(1+j:j+K);
         end
 
         if(nnz(dj == dj(1)) == K)
             continue;
         else
-            res_toeps = false;
+            res_hank = false;
             break;
         end
     end
 end
 
-if(res_toeps)
-    h = toeplitzmat( dsample(T,mi, ni(1)) , dsample(T,mi(1),ni) );
+if(res_hank)
+    h = hankelmat( dsample(H,mi, ni(1)) , dsample(H,mi(1),ni) );
 else
-    h = subsref(full(T), S);
+    h = subsref(full(H), S);
 end
 
 end

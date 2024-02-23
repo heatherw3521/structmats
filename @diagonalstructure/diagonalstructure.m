@@ -22,7 +22,7 @@ classdef (Abstract) diagonalstructure
         
         result = transpose(obj1, obj2);
 
-        result = sample(obj1, I, J);
+        result = dsample(obj1, I, J);
     end
 end
 
