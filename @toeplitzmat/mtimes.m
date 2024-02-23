@@ -25,7 +25,7 @@ else % toeplitzmat * ???
         G = toeplitz(G);
     end
  
-    % RECURSE! (to deal with rectangular matrices
+    % RECURSE! (to deal with rectangular matrices)
     if (N == 1)
         h = T.tc * G;
     elseif (M ==1)

@@ -1,6 +1,6 @@
-% Levent Batakci
-% mtimes is blowing my mind...
-
+% Super basic test to try out mtimes for TOEPLITZMAT
+% Will be replaced by a corresponding test in a proper
+%   testing suite, eventually.
 
 
 
