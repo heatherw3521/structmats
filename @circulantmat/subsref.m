@@ -2,7 +2,7 @@ function h = subsref(C, S)
 %SUBSREF gets the part of a Toeplitzmat object by referenced subscript.
 %   The result may or may not itself be Toeplitz
 
-% This will allow all the code below to consider 1-element input!
+% This will allow all the code below to just consider 1-element input!
 if(size(S,2) >= 2)
     h = subsref(subsref(C,S(1)), S(2:end));
 end

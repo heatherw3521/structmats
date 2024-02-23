@@ -28,5 +28,6 @@ function C = constructor(C, varargin)
     % All is good - finish construction
     C.tc = tc;
     C.tr = C.tc.'; % Let's store this, but we will not compute with it.
+    % C.tr = "tc"; % DON'T STORE THIS, JUST ACCESS TC
 end
 

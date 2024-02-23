@@ -23,7 +23,7 @@ if( isa(C, 'circulantmat') && isa(G, 'circulantmat'))
 % CASE: One Toeplitzmat Object    
 elseif ( ftest(G) ) % CIRCULANTMAT f ftype
     if( isscalar(G) )
-        h = circulantmat(f(C.tc,G), f(C.tr,G));
+        h = circulantmat(f(C.tc,G));
     else
         h = f(full(C), G);
     end
