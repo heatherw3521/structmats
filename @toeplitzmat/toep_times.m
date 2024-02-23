@@ -3,9 +3,8 @@ function h = toep_times(T, X)
 %   This is done through clever use of Fourier transform and
 %   circulant matrices
 
-    c1 = [T.tc ; 0; fliplr(T.tr(2:end).') ]';
-    d = fft(c1)';
-    % C = circulant(c1);
+    c1 = [T.tc ; 0; fliplr(T.tr(2:end)).' ];
+    d = fft(c1);
     
     R = [X;zeros(size(T,2), size(X,2))];
         
