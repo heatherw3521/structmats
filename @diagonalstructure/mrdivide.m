@@ -4,13 +4,7 @@ function h = mrdivide(T, G)
 %
 %   The code below is just a placeholder!
 
-if(isa(T,'toeplitzmat'))
-    T = toeplitz(T);
-end
-if(isa(G,'toeplitzmat'))
-    G = toeplitz(G);
-end
 % Attempt matrix division
-h = T / G;
+h = full(T) / full(G);
 end
 

@@ -1,4 +1,4 @@
-function h = toep_apply(f, ftest, fname, T, G)
+function h = diag_apply(f, ftest, fname, T, G)
 %TOEP_APPLY Applies functions that preserve toeplitz structure under
 %   certain conditions. It turns out that many of the regular operations,
 %   namely the pointwise ones, maintain Toeplitz structure if the input

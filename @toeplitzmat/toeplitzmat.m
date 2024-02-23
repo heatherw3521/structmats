@@ -1,4 +1,4 @@
-classdef toeplitzmat
+classdef toeplitzmat < diagonalstructure
     %TOEPLITZMAT class for representing Toeplitz matrices and computing
     %   with them in an efficient manner.
     %
