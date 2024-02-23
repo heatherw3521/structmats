@@ -2,10 +2,14 @@ function T = constructor(T, varargin)
 %CONSTRUCTOR The main TOEPLITZMAT constructor
 %   TODO: Detailed explanation goes here
 
-    % Error cases - Wrong number of inputs
-    if( numel(varargin) < 2)
-        error('STRUCTMATS:TOEPLITZMAT:constructor:missingargs', ...
-                'Too few (<2) arguments passed in to construct Toeplitz matrix');
+    % CASE: Only first column specified -- assume circulant
+    if( numel(varargin) == 1)
+        if( isa(varargin{1},'circulantmat') )
+            T = toeplitzmat(varargin{1}.tc, varargin{1}.tc);
+        else
+            T = toeplitzmat(varargin{1},varargin{1});
+        end
+        return;
     elseif( numel(varargin) > 2)
         error('STRUCTMATS:TOEPLITZMAT:constructor:toomanyargs', ...
                 'Too many (>2) arguments passed in to construct Toeplitz matrix');
@@ -18,7 +22,7 @@ function T = constructor(T, varargin)
     % Error case - bad input pair types
     if( (~isnumeric(tc) && ~islogical(tc)) || ~isa(tr, class(tc)))
         error('STRUCTMATS:TOEPLITZMAT:constructor:inputtypemismatch', ...
-                ['Inputs pair of types %s and %s is not supported for TOEPLITZMAT.'],...
+                'Inputs pair of types %s and %s is not supported for TOEPLITZMAT.',...
                 class(tc), class(tr));
     end
     

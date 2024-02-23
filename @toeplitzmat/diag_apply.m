@@ -1,5 +1,5 @@
 function h = diag_apply(f, ftest, fname, T, G)
-%TOEP_APPLY Applies functions that preserve toeplitz structure under
+%DIAG_APPLY Applies functions that preserve toeplitz structure under
 %   certain conditions. It turns out that many of the regular operations,
 %   namely the pointwise ones, maintain Toeplitz structure if the input
 %   pair is either Toeplitz-Toeplitz or Toeplitz-scalar

@@ -11,8 +11,7 @@ classdef toeplitzmat < diagonalstructure
     %       [ 1  2  3  4]
     %
     %   The first column and first row of a Toeplitz matrix determine all
-    %   other entries. Thus, an n-by-m Toeplitz matrix is generically rank 
-    %   n+m-1. We can encode a Toeplitz matrix by storing its first row
+    %   other entries. We can encode a Toeplitz matrix by storing its first row
     %   and first column -- saving a lot of space.
     %
     %   The special structure of these matrices gives rise to highly
@@ -29,18 +28,19 @@ classdef toeplitzmat < diagonalstructure
             
             % Error out if no arguments given
             if ( (nargin == 0) )
-                error('STRUCTMATS:TOEPLITZMAT:constructor:none', ...
-                'Cannot construct a Toeplitz matrix with no inputs');
-            end
+                T.tc = [];
+                T.tr = [];
             % Call the constructor, all the work is done here:
-            T = constructor(T, varargin{:});       
+            else
+                T = constructor(T, varargin{:});
+            end       
         end
     end
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% CLASS PROPERTIES
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    properties (GetAccess = public, SetAccess = private)
+    properties (GetAccess = public, SetAccess = protected)
         % 'tc', 'tr' are the first column and first row, respectively
         tc 
         tr

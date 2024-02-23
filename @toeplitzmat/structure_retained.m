@@ -1,4 +1,4 @@
-function h = structure_retained(T, S)
+function h = structure_retained(C, S)
 %STRUCTURE_RETAINED Summary of this function goes here
 %   Detailed explanation goes here
 
