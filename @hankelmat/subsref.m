@@ -32,20 +32,8 @@ m = size(mi,2);
 ni = S.subs{2}; % Column Indexing
 n = size(ni,2);
 
-% Simplification cases
-consecm = false; consecn = false;
-if(isequal(mi,':') && isequal(ni,':'))
-    h = H; return;
-elseif(isequal(mi,':'))
-    mi = 1:M; m = M;
-    consecm = true;
-elseif(isequal(ni,':'))
-    ni = 1:N; n = N;
-    consecn = true;
-end
-
 if(n==1) % Select rows from the ni(1)-th column
-    c = getcr(mi, ni(1));
+    c = dsample(H, mi, ni(1));
     h = hankelmat(c, c(1)); % This will be a vector
     return;
 end
@@ -53,13 +41,10 @@ end
 % Compute whether the result will be toeplitz
 % This takes O(nm) time in the worst case, but that is no worse
 % than building an n-by-m matrix!
-% Catches a common simpler case in O(n+m) time
-consec = @(ki) isequal(ki, ki(1):ki(end));
+% 
+% TODO: Catch a common simpler case in O(n+m) time
 
-consecm = consecm || consec(mi); % should short circuit for efficiency!
-consecn = consecn || consec(ni);
-
-res_hank = consecm && consecn; % Ininital check
+res_hank = false; % Ininital check
 if(~res_hank) % Deeper check - if needed
     res_hank = true;
     for j = -m+2:n-2
