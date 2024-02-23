@@ -10,14 +10,14 @@ if( isa(T, 'toeplitzmat') && isa(G, 'toeplitzmat'))
     if( ~isequal(size(T), size(G)) )
         error( 'TOEPLITZMAT:%s:sizemismatch', fname, ...
             'Cannot %s Toeplitz matrices of sizes %s -by- %s and %s -by- %s.',...
-            fname, ""+size(T.tc,1),""+size(T.tc,2), ""+size(G.tc,1),""+size(G.tr,2) );       
+            fname, ""+size(T,1),""+size(T,2), ""+size(G,1),""+size(G,2) );       
     end
     h = toeplitzmat( f(T.tc, G.tc), f(T.tr, G.tr) );
     
 % CASE: One Toeplitzmat Object    
 elseif ( ftest(G) ) % TOEPLITZMAT f ftype
     if( isscalar(G) )
-        h = toeplitzmat(f(T.tc,G), f(T.tc,G));
+        h = toeplitzmat(f(T.tc,G), f(T.tr,G));
     else
         h = f(toeplitz(T), G);
     end

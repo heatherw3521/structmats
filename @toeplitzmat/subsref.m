@@ -1,6 +1,17 @@
-function h = subsref(T,S)
+function h = subsref(T, S)
 %SUBSREF gets the part of a Toeplitzmat object by referenced subscript.
 %   The result may or may not itself be Toeplitz
+
+
+% SOME WEIRD STUFF WAS HAPPENING, this was the fix
+% TODO: figure out if this is truly needed
+if(S(1).type == '.')
+    h = builtin('subsref',T,S(1));
+    if(size(S,2) >= 2)
+        h = subsref(h, S(2:end));
+    end
+    return;
+end
 
 % Get dimensions of T
 M = size(T,1); 

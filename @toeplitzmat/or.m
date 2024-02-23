@@ -5,5 +5,5 @@ function h = or(T,G)
 
 % we can do logic on numerical data too
 ftest = @(x) (isnumeric(x) || islogical(x));
-h = toep_apply(@(x,y) x & y, ftest, "&", T, G);
+h = toep_apply(@(x,y) x | y, ftest, "|", T, G);
 end

@@ -1,4 +1,4 @@
-function h = subsasgn(T,S, b)
+function h = subsasgn(T, S, b)
 %SUBSASGN sets the part of a Toeplitzmat object by referenced subscript.
 %   The result may or may not itself be Toeplitz
 
