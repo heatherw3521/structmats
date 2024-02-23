@@ -2,6 +2,10 @@ function h = subsref(T, S)
 %SUBSREF gets the part of a Toeplitzmat object by referenced subscript.
 %   The result may or may not itself be Toeplitz
 
+if(isequal(S(1).type, '{}'))
+    error( "TOEPLITZMAT:subsref:unsupportedtype", ...
+        'Subindexing with {} unsupported for TOEPLITZMAT.');
+end
 
 % SOME WEIRD STUFF WAS HAPPENING, this was the fix
 % TODO: figure out if this is truly needed

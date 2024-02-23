@@ -21,7 +21,10 @@ else % toeplitzmat * ???
     N = size(T,2); 
     M = size(T,1);
 
-    B = toeplitz(G);    
+    if(isa(G,'toeplitzmat'))
+        G = toeplitz(G);
+    end
+ 
     % RECURSE! (to deal with rectangular matrices
     if (N == 1)
         h = T.tr * toeplitz(G);
@@ -30,11 +33,16 @@ else % toeplitzmat * ???
     elseif(N == M)
         h = toep_times(T, toeplitz(G) );
     elseif N > M
-        h = toep_times( T(:,1:M), B(1:M,:) ) + ...
-            T(:,M+1:end) * B(M+1:end,:);
+        T1 = toeplitzmat(T.tc, T.tr(1:M));
+        T2 = toeplitzmat([T.tr(M+1) flip(T1.tr(2:end))].', T.tr(M+1:end));
+
+        h = toep_times( T1, G(1:M,:)) + T2*G(M+1:end,:);
     else
-        h = [toep_times(T(1:N,:), B) ; ...
-            T(N+1:end,:) * B];
+        T1 = toeplitzmat(T.tc(1:N), T.tr);
+        T2 = toeplitzmat(T.tc(N+1:end), [T.tc(N+1) flip(T1.tc(2:end))].');
+        
+        h = [toep_times(T1, G) ; ...
+            T2 * G];
     end
 end
 end
