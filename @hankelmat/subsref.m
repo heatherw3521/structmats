@@ -18,7 +18,7 @@ if(S(1).type == '.')
 end
 
 % Get dimensions of T
-M = size(H,1); 
+M = size(H,1);
 N = size(H,2);
 
 mi = S.subs{1}; % Row Indexing
@@ -30,11 +30,18 @@ end
 m = size(mi,2);
 
 ni = S.subs{2}; % Column Indexing
+if(isequal(mi,':') && isequal(ni,':'))
+    h = T; return;
+elseif(isequal(mi,':'))
+    mi = 1:M; m = M;
+elseif(isequal(ni,':'))
+    ni = 1:N;
+end
 n = size(ni,2);
 
 if(n==1) % Select rows from the ni(1)-th column
     c = dsample(H, mi, ni(1));
-    h = hankelmat(c, c(1)); % This will be a vector
+    h = hankelmat(c, c(end)); % This will be a vector
     return;
 end
 

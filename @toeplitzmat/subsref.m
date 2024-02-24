@@ -44,11 +44,8 @@ elseif(isequal(ni,':'))
     consecn = true;
 end
 
-% quick hack, helps map rows and cols
-getcr = @(i,j) (j>=i) .* T.tr(min(abs(j-i)+1,N)) + (j<i).*T.tc(min(abs(i-j)+1,M))';
-
 if(n==1) % Select rows from the ni(1)-th column
-    c = getcr(mi, ni(1));
+    c = dsample(T, mi, ni(1));
     h = toeplitzmat(c, c(1)); % This will be a vector
     return;
 end
