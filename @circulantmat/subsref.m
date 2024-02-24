@@ -17,14 +17,7 @@ if(isequal(S.type, '.'))
         h =  subsref@toeplitzmat(C, S); % USE SUPER
     end
 elseif(isequal(S.type, '()'))
-    
-    mi = S.subs{1};
-    if(size(S.subs,2) == 1 || ~isequal(mi, S.subs{2}))
-        h =  subsref@toeplitzmat(C, S); % USE SUPER
-    else
-        h = circulantmat(C.tc(1:size(mi,2)));
-    end
-
+    h =  subsref@toeplitzmat(C, S); % USE SUPER
 end
 
 end
