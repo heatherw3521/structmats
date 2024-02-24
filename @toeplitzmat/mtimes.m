@@ -24,26 +24,10 @@ else % toeplitzmat * ???
     if(isa(G,'toeplitzmat'))
         G = toeplitz(G);
     end
- 
-    % RECURSE! (to deal with rectangular matrices)
-    if (N == 1)
-        h = T.tc * G;
-    elseif (M ==1)
-        h = T.tr * G;
-    elseif(N == M)
-        h = toep_times(T, G);
-    elseif N > M
-        T1 = toeplitzmat(T.tc, T.tr(1:M));
-        T2 = toeplitzmat([T.tr(M+1) flip(T1.tr(2:end))].', T.tr(M+1:end));
 
-        h = toep_times( T1, G(1:M,:)) + T2*G(M+1:end,:);
-    else
-        T1 = toeplitzmat(T.tc(1:N), T.tr);
-        T2 = toeplitzmat(T.tc(N+1:end), [T.tc(N+1);flip(T1.tc(2:end))].');
-        
-        h = [toep_times(T1, G) ; ...
-            T2 * G];
-    end
+    CT = circulantmat([T.tc;0;flip(T.tr(2:end)).']);
+    y = CT * [G;zeros(M,size(G,2))];
+    h = y(1:M,:);
 end
 end
 
