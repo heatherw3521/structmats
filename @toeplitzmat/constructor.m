@@ -5,9 +5,9 @@ function T = constructor(T, varargin)
     % CASE: Only first column specified -- assume circulant
     if( numel(varargin) == 1)
         if( isa(varargin{1},'circulantmat') )
-            T = toeplitzmat(varargin{1}.tc, varargin{1}.tc);
+            T = toeplitzmat(varargin{1}.tc, varargin{1}.tr);
         else
-            T = toeplitzmat(varargin{1},varargin{1});
+            T = toeplitzmat(circulantmat(varargin{1}));
         end
         return;
     elseif( numel(varargin) > 2)

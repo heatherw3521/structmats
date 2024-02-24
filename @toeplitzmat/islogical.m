@@ -1,6 +1,6 @@
-function h = islogical(H)
+function h = islogical(T)
 %ISLOGICAL returns whether the stored values are logical
 
-h = islogical(H.hc);
+h = islogical(T.tc);
 end
 
