@@ -7,7 +7,7 @@ function T = constructor(T, varargin)
         if( isa(varargin{1},'circulantmat') )
             T = toeplitzmat(varargin{1}.tc, varargin{1}.tr);
         else
-            T = toeplitzmat(circulantmat(varargin{1}));
+            T = toeplitzmat(varargin{1},varargin{1});
         end
         return;
     elseif( numel(varargin) > 2)
