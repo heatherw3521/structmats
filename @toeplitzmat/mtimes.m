@@ -9,7 +9,7 @@ if(isscalar(T) || isscalar(G))
 
 % CASE: both inputs non-scalar
 elseif( ~isa(T, 'toeplitzmat') ) % ??? * Toeplitzmat
-    h = mtimes(G', T')';
+    h = mtimes(G.', T.').';
 
 else % toeplitzmat * ???
     % CASE: Bad input sizes
