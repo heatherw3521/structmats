@@ -5,7 +5,7 @@ function h = diag_apply(f, ftest, fname, C, G)
 %   pair is either Circulant-Circulant, Circulant-Toeplitz, or Circulant-scalar
 
 % CASE: Second input is toeplitz, give precedence
-if( isa(G, 'toeplitzmat') )
+if( isequal(class(G), 'toeplitzmat') )
     h = diag_apply(f, ftest, fname, toeplitzmat(C), G);
     return;
 end
