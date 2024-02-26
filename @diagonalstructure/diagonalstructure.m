@@ -1,4 +1,4 @@
-classdef (Abstract) diagonalstructure
+classdef (Abstract) diagonalstructure < structuredmat
     %DIAGONALSTRUCTURE Abstract class for representing structured matrices
     %   with nice properties along diagonals or anti-diagonals. The big
     %   idea is that applying certain pointwise operations to the matrix
@@ -16,12 +16,13 @@ classdef (Abstract) diagonalstructure
     %% CLASS METHODS
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     methods (Abstract)
+        % code reuse for pointwise diagonal operations
         result = diag_apply(f, fname, ftest, obj1, obj2)
-        result = structure_retained(obj, mi, ni); 
-        result = full(obj1, obj2);
         
-        result = transpose(obj1, obj2);
-
+        % indicates whether D(I,J) will have the same diagonal structure
+        result = structure_retained(obj, I, J); 
+        
+        % gets the result of D(I,J), used in subsref
         result = dsample(obj1, I, J);
     end
 end
