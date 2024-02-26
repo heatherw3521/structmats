@@ -6,13 +6,14 @@ M = 5000; N = 1250;
 %% TEST toeplitzmat
 sample = @(m,n) SampleToeplitz(m,n);
 RunPointwiseTests(sample, M, N);
-
+RunInequalityTests(sample, M, N);
 
 %% TEST circulantmat
 sample = @(m,n) SampleCirculant(m);
 RunPointwiseTests(sample,M,M); % circulant matrices are square!
-
+RunInequalityTests(sample, M, M);
 
 %% TEST hankelmat
 sample = @(m,n) SampleHankel(m,n);
 RunPointwiseTests(sample,M,N);
+RunInequalityTests(sample, M,N);

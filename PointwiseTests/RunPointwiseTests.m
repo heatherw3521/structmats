@@ -1,4 +1,4 @@
-function t = RunPointwiseTests(sample, M, N)
+function RunPointwiseTests(sample, M, N)
 %RUNPOINTWISETESTS Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -23,8 +23,13 @@ run(tst);
 tst.binaryFxn = @(x,y) x./y;
 run(tst);
 
+% .\
+tst.binaryFxn = @(x,y) x.\y;
+run(tst);
+
 % .^
 tst.binaryFxn = @(x,y) x.^y;
 run(tst);
+
 end
 
