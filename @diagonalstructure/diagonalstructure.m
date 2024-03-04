@@ -15,12 +15,12 @@ classdef (Abstract) diagonalstructure < structuredmat
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% CLASS METHODS
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    methods (Abstract)
+    methods (Abstract, Static = true)
         % code reuse for pointwise diagonal operations
         result = diag_apply(f, fname, ftest, obj1, obj2)
         
         % indicates whether D(I,J) will have the same diagonal structure
-        result = structure_retained(obj, I, J); 
+        result = structure_retained(obj1, I, J); 
         
         % gets the result of D(I,J), used in subsref
         result = dsample(obj1, I, J);
