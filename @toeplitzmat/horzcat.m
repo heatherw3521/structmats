@@ -14,8 +14,9 @@ else
 
         % Check if sizes are compatible
         if( size(A,1) ~= size(B,1) )
-            error( 'TOEPLITZMAT:horzcat:sizemismatch', ...
-                'Cannot horizontally concatenate Toeplitz matrices of sizes %s -by- %s and %s -by- %s.',...
+            error(['TOEPLITZMAT:horzcat:sizemismatch', ...
+                 newline, ...
+                'Cannot horizontally concatenate Toeplitz matrices of sizes %s -by- %s and %s -by- %s.'],...
                 ""+size(A,1),""+size(A,2), ""+size(B,1),""+size(B,2) );   
         end
 
@@ -41,9 +42,9 @@ else
         elseif ( isempty(B) ) % [ [] TOEPLITZMAT]
             C = A;
         elseif ( isa(A, 'toeplitzmat') ) % Attempt the concatenation 
-            C = [toeplitz(A.tc, A.tr) B];
+            C = [full(A.tc, A.tr) B];
         else
-            C = [A toeplitz(B.tc, B.tr)];
+            C = [A full(B.tc, B.tr)];
         end
     end
 end

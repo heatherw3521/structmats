@@ -16,8 +16,6 @@ classdef toeplitzmat < diagonalstructure
     %
     %   The special structure of these matrices gives rise to highly
     %   efficient algorithms. TODO - explain more
-    %
-    %   TODO - describe constructors
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% CLASS CONSTRUCTOR:

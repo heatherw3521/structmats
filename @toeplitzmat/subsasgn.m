@@ -5,6 +5,6 @@ function h = subsasgn(T, S, b)
     h = subsasgn(toeplitz(T), S, b);
 
 %% TO DO: Make this function smart enough to detect when the result
-%   will be Toeplitz
+%   will be Toeplitz. Not sure how useful this will be.
 
 end
