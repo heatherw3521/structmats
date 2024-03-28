@@ -2,7 +2,11 @@ classdef (Abstract) structuredmat
     %DIAGONALSTRUCTURE Abstract class for representing structured matrices.
     %   The purpose of this class is to standardize what we require of the 
     %   structured matrices that we implement.
-    %
+    %   
+    %   It is an abstract class, which means that it cannot be
+    %   instantiated. However, all of the structured matrix classes we
+    %   create (e.g. Toeplitz, Circulant, Hankel, Cauchy, etc.) should
+    %   extend this class -- for organizational and practical purposes.
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% CLASS METHODS

@@ -29,7 +29,7 @@ elseif(isequal(J,':')) % Is I consecutive?
     res_toeps = spaced(I,1);
 elseif(length(I) == 1 || length(J) == 1) % Result is a row or a vector 
     res_toeps = true;
-else
+else % Nontrival spacing to deal with
     di = I(2)-I(1);
     res_toeps = spaced(J,di);
 end

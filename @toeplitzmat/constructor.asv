@@ -71,36 +71,45 @@ function T = constructor(T, varargin)
         tr = varargin{2};
         
         % ERROR (iv): Bad input types
-        if( ~isvector(tc) || ~isvector(tr))
-            error(['STRUCTMATS:TOEPLITZMAT:constructor:badinput', ...
-                    newline, ...
-                    'At least one of the inputs was not a vector']);        
-        elseif( (~isnumeric(tc) && ~islogical(tc)) || ~isa(tr, class(tc)))
-            error(['STRUCTMATS:TOEPLITZMAT:constructor:inputtypemismatch', ...
-                    newline, ...
+        if( ~isvector(tc) || (~isnumeric(tc) && ~islogical(tc)) || ~isa(tr, class(tc)))
+            error('STRUCTMATS:TOEPLITZMAT:constructor:inputtypemismatch', ...
                     'Inputs pair of types %s and %s is not supported for TOEPLITZMAT.',...
-                    class(tc), class(tr)]);
+                    class(tc), class(tr));
         end
             
         % Flip-flop tc,tr to ensure that they are a column and a row, resp.
         % i.e. tc should be m-by-1 and tr 1-by-n
-        if(size(tc,2) > 1)
+        if(size(tc,1) == 1)
             tc = tc.';
         end
-        if(size(tr, 1) > 1)
+        if(size(tr,2) == 1)
             tr = tr.';
         end
         
-        % ERROR (iii): Inconsistent top-left element
+        % Error case - input size (given col/row are not vectors)
+        if( size(tc,2) > 1 && size(tr,1) > 1 )
+            error('STRUCTMATS:TOEPLITZMAT:constructor:inputsizemismatch', ...
+                    'Both input first column and row are not vectors.');
+        elseif( size(tc,2) > 1 )
+            error('STRUCTMATS:TOEPLITZMAT:constructor:inputsizemismatch', ...
+                    'Input first column is not a vector.');
+        elseif( size(tr,1) > 1 )
+            error('STRUCTMATS:TOEPLITZMAT:constructor:inputsizemismatch', ...
+                    'Input first row is not a vector.');
+        end
+        
+        
+        % Error case - inconsistent top-left element
         if(tc(1) ~= tr(1))
-            error(['STRUCTMATS:TOEPLITZMAT:constructor:badinput', ...
-                    newline, ...
-                    'Given first column and row have different first element.']);
+            error('STRUCTMATS:TOEPLITZMAT:constructor:firstelementmismatch', ...
+                    'Given first column and row have different first element.');
         end
         
         % All is good - finish construction
         T.tc = tc;
         T.tr = tr;
     end
+
+
 end
 
