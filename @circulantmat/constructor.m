@@ -1,33 +1,61 @@
 function C = constructor(C, varargin)
 %CONSTRUCTOR The main CIRCULANTMAT constructor
-%   TODO: Detailed explanation goes here
+%   A Circulant matrix is determined by it's first column.
+%   As such, the input will be of the forms:
+%
+%   CASE 1: |varargin| = 1, containing a vector
+%           The input is the first column of the circulant matrix -- just
+%           store it. This determines the entire matrix, but currently, we
+%           also want to store the first row. This is due to MATLAB
+%           handling subsref in an odd way.
+%
+%   ERROR CASES: There are a few different ways for a user to provide
+%               invalid input.
+%           (i): |varargin| = 0
+%                It does not quite make sense to have an empty constructor
+%                for CIRCULANTMAT.
+%          (ii): |varargin| > 1
+%                A circulant matrix only needs 1 input: the first column.
+%         (iii): Bad input type
+%                If the input type does not fit into one of the valid CASES
+%                outlined above, then we have no way to make sense of it.
+%                For instance, if a string is passed in, we cannot turn it
+%                into a CIRCULANTMAT in a meaningful way.
 
-    % Error cases - Wrong number of inputs
+    % ERROR (i)
     if( numel(varargin) == 0)
         error('STRUCTMATS:CIRCULANTMAT:constructor:missingargs', ...
+                newline, ...
                 'Too few (0) arguments passed in to construct Circulant matrix');
+    
+    % ERROR (ii)
     elseif( numel(varargin) >= 2)
-        error('STRUCTMATS:CIRCULANTMAT:constructor:toomanyargs', ...
-                'Too many (>1) arguments passed in to construct Circulant matrix');
+        error(['STRUCTMATS:CIRCULANTMAT:constructor:toomanyargs', ...
+                newline, ...
+                'Too many (%s) arguments passed in to construct Circulant matrix'],...
+                numel(varargin));
     end
 
     % Get the first column
     tc = varargin{1};
     
-    % Flip-flop tc,tr to ensure that they are a column and a row, resp.
-    if(size(tc,1) == 1)
-        tc = tc.';
+    % ERROR (iii)
+    if(~isvector(tc))
+        error('STRUCTMATS:CIRCULANTMAT:constructor:badinput', ...
+                'Input is not a vector.');
+    elseif(~islogical(tc) && ~isnumeric(tc))
+        error(['STRUCTMATS:CIRCULANTMAT:constructor:badinput', ...
+                'Cannot create a CIRCULANTMAT from input of type %s'], ...
+                class(tc));
     end
-    
-    % Error case - input 'first column' is not a vector
-    if( size(tc,2) > 1)
-        error('STRUCTMATS:CIRCULANTMAT:constructor:inputsizemismatch', ...
-                'Input first column iis not a vector.');
+
+    % Flip-flop tc to ensure that it is m-by-1
+    if(size(tc,2) > 1)
+        tc = tc.';
     end
     
     % All is good - finish construction
     C.tc = tc;
-    C.tr = [tc(1) flip(tc(2:end)).']; % Let's store this, but we will not compute with it.
-    % C.tr = "tc"; % DON'T STORE THIS, JUST ACCESS TC
+    C.tr = [tc(1) flip(tc(2:end)).']; % Let's store this for now.
 end
 

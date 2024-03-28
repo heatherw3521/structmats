@@ -1,4 +1,8 @@
 function C = transpose(C)
-%TRANSPOSE for CIRCULANTMAT objects. This is just the identity operation!
+%TRANSPOSE Transpose operation for CIRCULANTMAT objects
+
+    tc = C.tc;
+    C = circulantmat([tc(1); ...
+                     flip(tc(2:end))]);
 end
 

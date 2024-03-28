@@ -4,7 +4,7 @@ function T = constructor(T, varargin)
 %   As such, the input will be of the forms:
 %
 %   CASE 1: |varargin| = 1
-%       (a): The input is a CIRCULANT. We cast it to a TOEPLITZMAT.
+%       (a): The input is a CIRCULANTMAT. We cast it to a TOEPLITZMAT.
 %       (b): The input is a single vector. To be consistent with MATLAB, we
 %            interpret this vector to be both the first column and the
 %            first row -- i.e. we create a symmetric TOEPLITZMAT with first
