@@ -17,10 +17,11 @@ function res_toeps = structure_retained(T, I, J)
 %   implemented. This is not a priority, as the code will still work for
 %   these inputs, it just won't detect that the result should be toeplitz!
 
-%% TODO: This code is missing the edge case of one of the subindexing vectors
-%       being larger than the other. For example, if we are just getting a
-%       subindexing of a row or a column, the result will of course be
-%       toeplitz, but the code below does not catch this!
+% Easy case, subset of a single col/row
+if(isscalar(I) || isscalar(J))
+    res_toeps = true;
+    return;
+end
 
 % Helper function to determine whether an indexing is spaced uniformly
 spaced = @(k, dk) isequal(k, k(1) + dk*(0:length(k)-1));
