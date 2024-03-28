@@ -36,71 +36,84 @@ function T = constructor(T, varargin)
 %                For instance, if a string is passed in, we cannot turn it
 %                into a TOEPLITZMAT in a meaningful way.
 
-
-    % CASE 1: |varargin| = 1
-    if( numel(varargin) == 1)
-        v = varargin{1};
-
-        % (a): Input is a circulantmat, cast it to TOEPLITZMAT
-        if( isa(v,'circulantmat') )
-            T = toeplitzmat(varargin{1}.tc, varargin{1}.tr);
+% ERROR (i): Too few args
+if(numel(varargin) == 0)
+    error('STRUCTMATS:TOEPLITZMAT:constructor:toofewargs', newline, ...
+            'Too few (0) arguments passed in to construct Toeplitz matrix');  
         
-        % (b): Input is a numeric vector, create a symmetric TOEPLITZMAT
-        elseif( isvector(v) && (isnumeric(v) || islogical(v)))
-            T = toeplitzmat(varargin{1},varargin{1});
+% ERROR (ii)
+elseif( numel(varargin) >= 2)
+    error(['STRUCTMATS:TOEPLITZMAT:constructor:toomanyargs', ...
+            newline, ...
+            'Too many (%s) arguments passed in to construct Toeplitz matrix'],...
+            numel(varargin));
+end
 
-        % ERROR (iv): Bad input type
-        else
-            error(['STRUCTMATS:TOEPLITZMAT:constructor:badinput', ...
-                newline, ...
-                'Cannot create a toeplitzmat out of single input of type %s'],...
-                class(v));
-        end
 
-    % ERROR (ii): Too many inputs
-    elseif( numel(varargin) > 2)
-        error(['STRUCTMATS:TOEPLITZMAT:constructor:toomanyargs', ...
-                newline, ...
-                'Too many (%s) arguments passed in to construct Toeplitz matrix'],...
-                numel(varargin));
+% CASE 1: |varargin| = 1
+if( numel(varargin) == 1)
+    v = varargin{1};
 
-    % CASE 2: |varargin| = 2
+    % (a): Input is a circulantmat, cast it to TOEPLITZMAT
+    if( isa(v,'circulantmat') )
+        T = toeplitzmat(varargin{1}.tc, varargin{1}.tr);
+    
+    % (b): Input is a numeric vector, create a symmetric TOEPLITZMAT
+    elseif( isvector(v) && (isnumeric(v) || islogical(v)))
+        T = toeplitzmat(varargin{1},varargin{1});
+
+    % ERROR (iv): Bad input type
     else
-        % Get the first row and column
-        tc = varargin{1};
-        tr = varargin{2};
-        
-        % ERROR (iv): Bad input types
-        if( ~isvector(tc) || ~isvector(tr))
-            error(['STRUCTMATS:TOEPLITZMAT:constructor:badinput', ...
-                    newline, ...
-                    'At least one of the inputs was not a vector']);        
-        elseif( (~isnumeric(tc) && ~islogical(tc)) || ~isa(tr, class(tc)))
-            error(['STRUCTMATS:TOEPLITZMAT:constructor:inputtypemismatch', ...
-                    newline, ...
-                    'Inputs pair of types %s and %s is not supported for TOEPLITZMAT.'],...
-                    class(tc), class(tr));
-        end
-            
-        % Flip-flop tc,tr to ensure that they are a column and a row, resp.
-        % i.e. tc should be m-by-1 and tr 1-by-n
-        if(size(tc,2) > 1)
-            tc = tc.';
-        end
-        if(size(tr, 1) > 1)
-            tr = tr.';
-        end
-        
-        % ERROR (iii): Inconsistent top-left element
-        if(tc(1) ~= tr(1))
-            error(['STRUCTMATS:TOEPLITZMAT:constructor:badinput', ...
-                    newline, ...
-                    'Given first column and row have different first element.']);
-        end
-        
-        % All is good - finish construction
-        T.tc = tc;
-        T.tr = tr;
+        error(['STRUCTMATS:TOEPLITZMAT:constructor:badinput', ...
+            newline, ...
+            'Cannot create a toeplitzmat out of single input of type %s'],...
+            class(v));
     end
+
+% ERROR (ii): Too many inputs
+elseif( numel(varargin) > 2)
+    error(['STRUCTMATS:TOEPLITZMAT:constructor:toomanyargs', ...
+            newline, ...
+            'Too many (%s) arguments passed in to construct Toeplitz matrix'],...
+            numel(varargin));
+
+% CASE 2: |varargin| = 2
+else
+    % Get the first row and column
+    tc = varargin{1};
+    tr = varargin{2};
+    
+    % ERROR (iv): Bad input types
+    if( ~isvector(tc) || ~isvector(tr))
+        error(['STRUCTMATS:TOEPLITZMAT:constructor:badinput', ...
+                newline, ...
+                'At least one of the inputs was not a vector']);        
+    elseif( (~isnumeric(tc) && ~islogical(tc)) || ~isa(tr, class(tc)))
+        error(['STRUCTMATS:TOEPLITZMAT:constructor:inputtypemismatch', ...
+                newline, ...
+                'Inputs pair of types %s and %s is not supported for TOEPLITZMAT.'],...
+                class(tc), class(tr));
+    end
+        
+    % Flip-flop tc,tr to ensure that they are a column and a row, resp.
+    % i.e. tc should be m-by-1 and tr 1-by-n
+    if(size(tc,2) > 1)
+        tc = tc.';
+    end
+    if(size(tr, 1) > 1)
+        tr = tr.';
+    end
+    
+    % ERROR (iii): Inconsistent top-left element
+    if(tc(1) ~= tr(1))
+        error(['STRUCTMATS:TOEPLITZMAT:constructor:badinput', ...
+                newline, ...
+                'Given first column and row have different first element.']);
+    end
+    
+    % All is good - finish construction
+    T.tc = tc;
+    T.tr = tr;
+end
 end
 

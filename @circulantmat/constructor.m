@@ -22,40 +22,40 @@ function C = constructor(C, varargin)
 %                For instance, if a string is passed in, we cannot turn it
 %                into a CIRCULANTMAT in a meaningful way.
 
-    % ERROR (i)
-    if( numel(varargin) == 0)
-        error('STRUCTMATS:CIRCULANTMAT:constructor:missingargs', ...
-                newline, ...
-                'Too few (0) arguments passed in to construct Circulant matrix');
-    
-    % ERROR (ii)
-    elseif( numel(varargin) >= 2)
-        error(['STRUCTMATS:CIRCULANTMAT:constructor:toomanyargs', ...
-                newline, ...
-                'Too many (%s) arguments passed in to construct Circulant matrix'],...
-                numel(varargin));
-    end
+% ERROR (i)
+if( numel(varargin) == 0)
+    error('STRUCTMATS:CIRCULANTMAT:constructor:toofewargs', ...
+            newline, ...
+            'Too few (0) arguments passed in to construct Circulant matrix');
 
-    % Get the first column
-    tc = varargin{1};
-    
-    % ERROR (iii)
-    if(~isvector(tc))
-        error('STRUCTMATS:CIRCULANTMAT:constructor:badinput', ...
-                'Input is not a vector.');
-    elseif(~islogical(tc) && ~isnumeric(tc))
-        error(['STRUCTMATS:CIRCULANTMAT:constructor:badinput', ...
-                'Cannot create a CIRCULANTMAT from input of type %s'], ...
-                class(tc));
-    end
+% ERROR (ii)
+elseif( numel(varargin) >= 2)
+    error(['STRUCTMATS:CIRCULANTMAT:constructor:toomanyargs', ...
+            newline, ...
+            'Too many (%s) arguments passed in to construct Circulant matrix'],...
+            numel(varargin));
+end
 
-    % Flip-flop tc to ensure that it is m-by-1
-    if(size(tc,2) > 1)
-        tc = tc.';
-    end
-    
-    % All is good - finish construction
-    C.tc = tc;
-    C.tr = [tc(1) flip(tc(2:end)).']; % Let's store this for now.
+% Get the first column
+tc = varargin{1};
+
+% ERROR (iii)
+if(~isvector(tc))
+    error('STRUCTMATS:CIRCULANTMAT:constructor:badinput', ...
+            'Input is not a vector.');
+elseif(~islogical(tc) && ~isnumeric(tc))
+    error(['STRUCTMATS:CIRCULANTMAT:constructor:badinput', ...
+            'Cannot create a CIRCULANTMAT from input of type %s'], ...
+            class(tc));
+end
+
+% Flip-flop tc to ensure that it is m-by-1
+if(size(tc,2) > 1)
+    tc = tc.';
+end
+
+% All is good - finish construction
+C.tc = tc;
+C.tr = [tc(1) flip(tc(2:end)).']; % Let's store this for now.
 end
 
