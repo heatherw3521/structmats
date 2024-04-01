@@ -35,6 +35,18 @@ function T = constructor(T, varargin)
 %                outlined above, then we have no way to make sense of it.
 %                For instance, if a string is passed in, we cannot turn it
 %                into a TOEPLITZMAT in a meaningful way.
+%
+%   Here is an example of constructing a toeplitzmat:
+%
+%   col = [1 2 3];
+%   row = [1 4 5];
+%   T = toeplitzmat(col,row);
+%
+%   The code above creates a toeplitzmat representing
+%       [1 4 5]
+%   T = [2 1 4]
+%       [3 2 1]
+%   Of course, only the first row and column are stored.
 
 % ERROR (i): Too few args
 if(numel(varargin) == 0)
