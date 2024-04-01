@@ -21,6 +21,19 @@ function C = constructor(C, varargin)
 %                outlined above, then we have no way to make sense of it.
 %                For instance, if a string is passed in, we cannot turn it
 %                into a CIRCULANTMAT in a meaningful way.
+%
+%   Here is an example of constructing a circulantmat:
+%
+%   v = [1 2 3];
+%   C = toeplitzmat(v);
+%
+%   The code above creates a circulantmat representing
+%       [1 3 2]
+%   C = [2 1 3]
+%       [3 2 1]
+%   Of course, only the first column and row are stored.
+%   (this will be improvewd in the future so that only the first column is
+%   stored)
 
 % ERROR (i)
 if( numel(varargin) == 0)

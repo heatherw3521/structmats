@@ -33,6 +33,18 @@ function H = constructor(H, varargin)
 %                outlined above, then we have no way to make sense of it.
 %                For instance, if a string is passed in, we cannot turn it
 %                into a HANKELMAT in a meaningful way.
+%
+%   Here is an example of constructing a hankelmat:
+%
+%   firstcol = [1 2 3];
+%   lastrow = [3 4 5];
+%   H = toeplitzmat(col,row);
+%
+%   The code above creates a toeplitzmat representing
+%       [1 2 3]
+%   H = [2 3 4]
+%       [3 4 5]
+%   Of course, only the last row and first column are stored.
 
 %ERROR (i): Too few args
 if(numel(varargin) == 0)
