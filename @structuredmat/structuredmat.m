@@ -52,6 +52,15 @@ classdef (Abstract) structuredmat
         r = ctranspose(obj1);
         r = flip(obj1);
         r = fliplr(obj1);
+
+        % overload the size function
+        r = size(obj1);
+    end
+
+    % Non-abstract methods
+    methods
+        % overload the end function for subindexing
+        r = end(obj1,k,n);
     end
 end
 
