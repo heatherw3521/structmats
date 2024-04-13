@@ -1,4 +1,4 @@
-function varargout = Toeps(tc,tr, b, varargin)
+function varargout = Toeps(tc, tr, b, varargin)
 % Solves the equation Tx =b, where T = toeplitz(tc, tr).
 % using the nonsingular version of the disp struct
 % Toeplitz_solve_ns(tc, tr, b, 'tol', tol) sets a tolerance parameter.
