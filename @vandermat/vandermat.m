@@ -36,8 +36,11 @@ classdef vandermat < structuredmat
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     methods ( Access = public, Static = false )
         function V = vandermat(varargin)
-            % The main vandermondemat constructor!
+            % The main vandermat constructor!
             
+            warning(['VANDERMAT is a work in progress! All operations are ',...
+                    'currently implemented via casting to a MATLAB matrix.'])
+
             % Error out if no arguments given
             if ( (nargin == 0) )
                 error('Cannot construct a Vandermonde matrix with no inputs!')
