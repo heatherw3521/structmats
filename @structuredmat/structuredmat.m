@@ -11,11 +11,28 @@ classdef (Abstract) structuredmat
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% CLASS METHODS
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    % Abstract methods, these absolutely NEED to be overloaded in
+    % subclasses.
     methods (Abstract)
 
         % full should cast to a regular MATLAB matrix
         r = full(obj1);
-        
+
+        % These need to be overloaded because of . indexing
+        r = subsref(obj1,S);
+        r = subsasgn(obj1,S,B)
+    end
+
+    % Non-abstract methods that probably should not be overloaded
+    methods
+        % overload the end function for subindexing
+        r = end(obj1,k,n);
+    end
+
+    % Methods with naive implementation at this level. Most, if not all, of
+    % these should be overloaded to make use of the underlying structures.
+    methods
         % overload the logic and comparison operators
         r = and(obj1,obj2);
         r = or(obj1,obj2);
@@ -42,8 +59,7 @@ classdef (Abstract) structuredmat
         r = mldivide(obj1,obj2);
         r = mrdivide(obj1,obj2);
 
-        % overload the subindexing and concatenation
-        r = subsref(obj1,obj2);
+        % overload concatenation
         r = horzcat(obj1,obj2);
         r = vertcat(obj1,obj2);
         
@@ -55,12 +71,6 @@ classdef (Abstract) structuredmat
 
         % overload the size function
         r = size(obj1);
-    end
-
-    % Non-abstract methods
-    methods
-        % overload the end function for subindexing
-        r = end(obj1,k,n);
     end
 end
 
