@@ -26,8 +26,8 @@ classdef toeplitzmat < diagonalstructure
             
             % Error out if no arguments given
             if ( (nargin == 0) )
-                T.tc = [];
-                T.tr = [];
+                error(['STRUCTMATS:TOEPLITZMAT:constructor:toofewargs', newline, ...
+                   'Too few (0) arguments passed in to construct Toeplitz matrix']);  
             % Call the constructor, all the work is done here:
             else
                 T = constructor(T, varargin{:});

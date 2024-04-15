@@ -50,15 +50,15 @@ function T = constructor(T, varargin)
 
 % ERROR (i): Too few args
 if(numel(varargin) == 0)
-    error('STRUCTMATS:TOEPLITZMAT:constructor:toofewargs', newline, ...
-            'Too few (0) arguments passed in to construct Toeplitz matrix');  
-        
+    error(['STRUCTMATS:TOEPLITZMAT:constructor:toofewargs', newline, ...
+       'Too few (0) arguments passed in to construct Toeplitz matrix']);  
+    
 % ERROR (ii)
 elseif( numel(varargin) > 2)
     error(['STRUCTMATS:TOEPLITZMAT:constructor:toomanyargs', ...
             newline, ...
             'Too many (%s) arguments passed in to construct Toeplitz matrix'],...
-            numel(varargin));
+            ""+numel(varargin));
 end
 
 
@@ -87,7 +87,7 @@ elseif( numel(varargin) > 2)
     error(['STRUCTMATS:TOEPLITZMAT:constructor:toomanyargs', ...
             newline, ...
             'Too many (%s) arguments passed in to construct Toeplitz matrix'],...
-            numel(varargin));
+            ""+numel(varargin));
 
 % CASE 2: |varargin| = 2
 else

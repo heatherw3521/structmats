@@ -48,8 +48,8 @@ function H = constructor(H, varargin)
 
 %ERROR (i): Too few args
 if(numel(varargin) == 0)
-    error('STRUCTMATS:HANKELMAT:constructor:toofewargs', newline, ...
-            'Too few (0) arguments passed in to construct Hankel matrix');  
+    error(['STRUCTMATS:HANKELMAT:constructor:toofewargs', newline, ...
+            'Too few (0) arguments passed in to construct Hankel matrix']);  
         
 % ERROR (ii)
 elseif( numel(varargin) > 2)
@@ -64,8 +64,8 @@ hc = varargin{1};
 
 % ERROR (iv): Bad input type (non-vector)
 if(~isvector(hc))
-    error('STRUCTMATS:HANKELMAT:constructor:badinput', newline, ...
-            'Input for first-column is not a vector.');
+    error(['STRUCTMATS:HANKELMAT:constructor:badinput', newline, ...
+            'Input for first-column is not a vector.']);
 
 % ERROR (iv): Bad input type (uninterpretable)
 elseif((~isnumeric(hc) && ~islogical(hc)))
