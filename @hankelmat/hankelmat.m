@@ -26,8 +26,8 @@ classdef hankelmat < diagonalstructure
             
             % Error out if no arguments given
             if ( (nargin == 0) )
-                H.hc = [];
-                H.hr = [];
+                error(['STRUCTMATS:HANKELMAT:constructor:toofewargs', newline, ...
+                   'Too few (0) arguments passed in to construct Hankel matrix']);  
             % Call the constructor, all the work is done here:
             else
                 H = constructor(H, varargin{:});

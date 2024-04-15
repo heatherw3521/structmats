@@ -26,7 +26,7 @@ classdef circulantmat < toeplitzmat
         function C = circulantmat(varargin)
             % The main toeplitzmat constructor!
             
-            % Error out if no arguments given
+            % Initialize empty TOEPLITZMAT
             if ( (nargin == 0) )
                 error('STRUCTMATS:CIRCULANTMAT:constructor:none', ...
                 'Cannot construct a Ciruclant matrix with no inputs');

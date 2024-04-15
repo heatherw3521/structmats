@@ -1,5 +1,5 @@
 function h = and(T,G)
-%|  Pointwise logical and for DIAGONALSTRUCTURE objects
+%&  Pointwise logical and for DIAGONALSTRUCTURE objects
 %   T and g can be DIAGONALSTRUCTUREs or scalars
 %   behaves the same as & for matrices in MATLAB
 

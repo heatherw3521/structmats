@@ -6,7 +6,7 @@ function s = size(T, dim)
     if(exist('dim','var'))
         if(dim <= 0 || dim >= 3)
             error(['TOEPLITZMAT:size:baddimension', ...
-                   'Cannot get size of toeplitzmatrix in dimension %s ',""+dim]);
+                   'Cannot get size of toeplitzmatrix in dimension %s '],""+dim);
         end
        s = s(dim);
     end

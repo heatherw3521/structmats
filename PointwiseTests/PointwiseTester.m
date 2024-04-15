@@ -1,6 +1,6 @@
 % TESTING DRIVER FOR POINTWISE OPERATIONS ON A STRUCTURED MATRIX
 
-% Test parameters
+% Test parametersC
 M = 500; N = 250;
 
 %% TEST toeplitzmat
