@@ -38,7 +38,7 @@ classdef vandermat < structuredmat
         function V = vandermat(varargin)
             % The main vandermat constructor!
             
-            error(['VANDERMAT is a work in progress! All operations are ',...
+            warning(['VANDERMAT is a work in progress! All operations are ',...
                     'currently implemented via casting to a MATLAB matrix.'])
 
             % Error out if no arguments given
