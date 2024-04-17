@@ -11,6 +11,8 @@ switch lower(matrixtype)
         S = nearby_toeplitz(A);
     case {'hankel','hankelmat','h'}
         S = nearby_hankel(A);
+    case {'circulant','circulantmat','c'}
+        S = nearby_circulant(A);
     otherwise
         error(['Currently, the NEARBY function does not support ',...
             'projection to matrices of type %s'], matrixtype)
