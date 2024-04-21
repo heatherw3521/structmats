@@ -1,5 +1,5 @@
-function h = hank_1_norm(H)
-%HANK_1_NORM Quickly computes the 1-norm for Hankel matrices.
+function h = norm_1(H)
+%NORM_1 Efficiently computes the 1-norm for Hankel matrices.
 %   The 1-norm is the maximum absolute column sum. 
 %
 %   We compute by noting that the 1 norm is invariant under right

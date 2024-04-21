@@ -1,5 +1,5 @@
-function h = hank_inf_norm(H)
-%HANK_INF_NORM Quickly computes the infinity-norm for Hankel matrices. 
+function h = norm_inf(H)
+%NORM_INF Efficiently computes the infinity-norm for Hankel matrices. 
 %   The inf-norm is the maximum absolute row sum. 
 % 
 %   We compute by noting that the infinity norm is invariant under left

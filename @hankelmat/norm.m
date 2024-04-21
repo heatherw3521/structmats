@@ -8,11 +8,11 @@ function h = norm(H,varargin)
     else
         switch lower(varargin{1})
             case {'fro', 'frobenius'}
-                h = hank_frobenius_norm(H);
-            case {'1'}
-                h = hank_1_norm(H);
+                h = norm_fro(H);
+            case {'1',1}
+                h = norm_1(H);
             case {'inf'}
-                h = hank_inf_norm(H);
+                h = norm_inf(H);
             otherwise
                 h = builtin('norm',full(H),varargin{:});
         end
