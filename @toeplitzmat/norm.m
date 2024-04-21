@@ -14,7 +14,7 @@ function h = norm(T,varargin)
             case {'inf'}
                 h = toep_inf_norm(T);
             otherwise
-                h = builtin('norm',full(T),varargin);
+                h = builtin('norm',full(T),varargin{:});
         end
     end
 
