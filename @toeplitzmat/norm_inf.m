@@ -1,5 +1,5 @@
 function h = norm_inf(T)
-%NORM_INF Quickly computes the infinity-norm for Toeplitz matrices. 
+%NORM_INF Efficiently computes the infinity-norm for Toeplitz matrices. 
 %   The inf-norm is the maximum absolute row sum.
 
     rs = [flip(cumsum(abs(T.tr(2:end)))) 0]; % super-diag partial sums

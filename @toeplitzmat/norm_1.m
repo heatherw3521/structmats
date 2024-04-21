@@ -1,5 +1,5 @@
 function h = norm_1(T)
-%NORM_1 Efficientl computes the 1-norm for Toeplitz matrices.
+%NORM_1 Efficiently computes the 1-norm for Toeplitz matrices.
 %   The 1-norm is the maximum absolute column sum. 
 % 
 %   For toeplitz matrices, the 1-norm and infinity-norm are the same! This
