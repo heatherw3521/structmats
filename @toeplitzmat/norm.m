@@ -8,11 +8,11 @@ function h = norm(T,varargin)
     else
         switch lower(varargin{1})
             case {'fro', 'frobenius'}
-                h = toep_frobenius_norm(T);
-            case {'1'}
-                h = toep_1_norm(T);
+                h = norm_fro(T);
+            case {'1',1}
+                h = norm_1(T);
             case {'inf'}
-                h = toep_inf_norm(T);
+                h = norm_inf(T);
             otherwise
                 h = builtin('norm',full(T),varargin{:});
         end
