@@ -4,7 +4,7 @@ function h = norm(H,varargin)
 %    value very efficiently.
 
     if(isempty(varargin))
-        h = builtin('norm',full(H));
+        h = norm_2(H);
     else
         switch lower(varargin{1})
             case {'fro', 'frobenius'}
@@ -13,6 +13,8 @@ function h = norm(H,varargin)
                 h = norm_1(H);
             case {'inf'}
                 h = norm_inf(H);
+            case {'2',2}
+                h = norm_2(H);
             otherwise
                 h = builtin('norm',full(H),varargin{:});
         end
