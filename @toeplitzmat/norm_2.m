@@ -19,7 +19,7 @@ function h = norm_2(T)
             lam_new = v.' * (T.'*(T*v));
             d = abs(lam - lam_new);
             lam = lam_new;
-            if (d < 1e-12)
+            if (d/lam < 1e-12)
                 break;
             end
         end
