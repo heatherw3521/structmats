@@ -6,7 +6,7 @@ function h = norm_fro(T)
     m = size(T,1);
     n = size(T,2);
     subsum = sum((min(n,m:-1:1))' .* (T.tc).^2); % Contribution on & below the diag
-    supsum = sum((min(m,n-1:-1:1)) .* (T.tr(2:end)).^2); % Contribution on & above diag
+    supsum = sum((min(m,n-1:-1:1)) .* (T.tr(2:end)).^2); % Contribution above diag
     h = sqrt(subsum + supsum);
 end
 
