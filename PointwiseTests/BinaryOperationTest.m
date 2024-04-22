@@ -37,15 +37,15 @@ classdef BinaryOperationTest < matlab.unittest.TestCase
         function scalarLeftPlus(testCase)
             [y, ytrue] = GeneralTest(testCase.sampleScalar, ...
                                    testCase.sampleStructured, ...
-                                   @(a,T) a+T);
+                                   testCase.binaryFxn);
             testCase.verifyEqual(full(y), ytrue); % Check answer
         end
         
         % scalar on the right
         function scalarRightPlus(testCase)
-            [y, ytrue] = GeneralTest(testCase.sampleScalar, ...
-                                   testCase.sampleStructured, ...
-                                   @(a,T) T+a);
+            [y, ytrue] = GeneralTest(testCase.sampleStructured, ...
+                                   testCase.sampleScalar, ...
+                                   testCase.binaryFxn);
             testCase.verifyEqual(full(y), ytrue); % Check answer
         end
 
@@ -53,15 +53,15 @@ classdef BinaryOperationTest < matlab.unittest.TestCase
         function matrixLeftPlus(testCase)
             [y, ytrue] = GeneralTest(testCase.sampleMatrix, ...
                                    testCase.sampleStructured, ...
-                                   @(a,T) a+T);
+                                   testCase.binaryFxn);
             testCase.verifyEqual(full(y), ytrue); % Check answer
         end
         
         % matrix on the right
         function matrixRightPlus(testCase)
-            [y, ytrue] = GeneralTest(testCase.sampleMatrix, ...
-                                   testCase.sampleStructured, ...
-                                   @(a,T) T+a);
+            [y, ytrue] = GeneralTest(testCase.sampleStructured, ...
+                                   testCase.sampleMatrix, ...
+                                   testCase.binaryFxn);
             testCase.verifyEqual(full(y), ytrue); % Check answer
         end
         
@@ -69,7 +69,7 @@ classdef BinaryOperationTest < matlab.unittest.TestCase
         function structuredPlus(testCase)
             [y, ytrue] = GeneralTest(testCase.sampleStructured, ...
                                    testCase.sampleStructured, ...
-                                   @(T1,T2) T1+T2);
+                                   testCase.binaryFxn);
             testCase.verifyEqual(full(y), ytrue); % Check answer
         end
     end
