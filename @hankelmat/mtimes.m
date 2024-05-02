@@ -7,6 +7,10 @@ function Y = mtimes(H,X)
     
 % TODO: Maybe just hard-code this to avoid toeplitzmat instantiation
 % overhead
-Y = flip(toeplitzmat(flip(H.hc),H.hr) * X);
+if(isa(H,"hankelmat"))
+    Y = flip(toeplitzmat(flip(H.hc),H.hr) * X);
+else
+    Y = (X.' * H.').';
+end
 end
 

@@ -38,7 +38,7 @@ classdef BinaryOperationTest < matlab.unittest.TestCase
             [y, ytrue] = GeneralTest(testCase.sampleScalar, ...
                                    testCase.sampleStructured, ...
                                    testCase.binaryFxn);
-            testCase.verifyEqual(full(y), ytrue); % Check answer
+            testCase.verifyEqual(full(y), ytrue, 'RelTol', 1e-13); % Check answer
         end
         
         % scalar on the right
@@ -46,7 +46,7 @@ classdef BinaryOperationTest < matlab.unittest.TestCase
             [y, ytrue] = GeneralTest(testCase.sampleStructured, ...
                                    testCase.sampleScalar, ...
                                    testCase.binaryFxn);
-            testCase.verifyEqual(full(y), ytrue); % Check answer
+            testCase.verifyEqual(full(y), ytrue, 'RelTol', 1e-13); % Check answer
         end
 
         % matrix on the left
@@ -54,7 +54,7 @@ classdef BinaryOperationTest < matlab.unittest.TestCase
             [y, ytrue] = GeneralTest(testCase.sampleMatrix, ...
                                    testCase.sampleStructured, ...
                                    testCase.binaryFxn);
-            testCase.verifyEqual(full(y), ytrue); % Check answer
+            testCase.verifyEqual(full(y), ytrue, 'RelTol', 1e-13); % Check answer
         end
         
         % matrix on the right
@@ -62,7 +62,7 @@ classdef BinaryOperationTest < matlab.unittest.TestCase
             [y, ytrue] = GeneralTest(testCase.sampleStructured, ...
                                    testCase.sampleMatrix, ...
                                    testCase.binaryFxn);
-            testCase.verifyEqual(full(y), ytrue); % Check answer
+            testCase.verifyEqual(full(y), ytrue, 'RelTol', 1e-13); % Check answer
         end
         
         % two structured matrices
@@ -70,7 +70,7 @@ classdef BinaryOperationTest < matlab.unittest.TestCase
             [y, ytrue] = GeneralTest(testCase.sampleStructured, ...
                                    testCase.sampleStructured, ...
                                    testCase.binaryFxn);
-            testCase.verifyEqual(full(y), ytrue); % Check answer
+            testCase.verifyEqual(full(y), ytrue, 'RelTol', 1e-13); % Check answer
         end
     end
     

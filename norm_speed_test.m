@@ -2,7 +2,7 @@
 %
 % Just a little speed-test for the 2-norm
 
-n = 1e5;
+n = 1e8;
 T = toeplitzmat(rand(n,1));
 % A = full(T);
 
