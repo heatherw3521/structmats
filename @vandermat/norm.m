@@ -11,6 +11,8 @@ function h = norm(V,varargin)
                 h = norm_fro(V);
             case {'inf'}
                 h = norm_inf(V);
+            case {'1', 1}
+                h = norm_1(V);
             otherwise
                 h = builtin('norm',full(V),varargin{:});
         end
