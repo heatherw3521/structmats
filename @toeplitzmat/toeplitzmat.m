@@ -42,6 +42,10 @@ classdef toeplitzmat < diagonalstructure
         % 'tc', 'tr' are the first column and first row, respectively
         tc 
         tr
+
+        % 'CT' is the circulantmat that will be used for matrix
+        % multiplications
+        CT = "uncomputed";
     end
 end
 

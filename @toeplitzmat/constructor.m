@@ -126,6 +126,8 @@ else
     % All is good - finish construction
     T.tc = tc;
     T.tr = tr;
+    
+    T.CT = circulantmat([T.tc;0;flip(T.tr(2:end)).']);
 end
 end
 

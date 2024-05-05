@@ -25,9 +25,11 @@ else % toeplitzmat * ???
     if(isa(G,'toeplitzmat'))
         G = toeplitz(G);
     end
-
-    CT = circulantmat([T.tc;0;flip(T.tr(2:end)).']);
-    y = CT * [G;zeros(M,size(G,2))];
+    
+    if(isequal(T.CT, "uncomputed"))
+        T.CT = circulantmat([T.tc;0;flip(T.tr(2:end)).']);
+    end
+    y = T.CT * [G;zeros(M,size(G,2))];
     h = y(1:M,:);
 end
 end

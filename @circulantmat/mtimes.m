@@ -23,8 +23,11 @@ else % circulantmat * ???
         G = full(G);
     end
 
-    d = fft(C.tc);        
-    h = ifft(d.*(fft(G)));
+    if(isequal(C.d, "uncomputed"))
+        C.d = fft(C.tc); 
+    end
+
+    h = ifft(C.d .* (fft(G)));
 
 end
 end

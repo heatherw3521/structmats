@@ -86,34 +86,35 @@ if( numel(varargin) == 1)
 
 % CASE 2: two vectors input
 else
-hr = varargin{2}; % Get the last row
-
-% ERROR (iv): Bad input type (non-vector)
-if(~isvector(hr))
-    error('STRUCTMATS:HANKELMAT:constructor:badinput', newline, ...
-            'Input for last-row is not a vector.');
-
-    % ERROR (iv): Bad input type (mismatch)
-elseif( ~isa(hr, class(hc)))
-    error(['STRUCTMATS:HANKELMAT:constructor:badinput', newline, ...
-            'Inputs pair of types %s and %s is not supported for HANKELMAT.'],...
-            class(hc), class(hr));    
-
-% ERROR (iii): Bottom-left element mismatch
-elseif(hc(end) ~= hr(1))
-    error('STRUCTMATS:HANKELMAT:constructor:firstelementmismatch', ...
-            'Given first column and row have different bottom left element.');
-end
-
-% Transpose hr if needed
-if(size(hr,1) > 1)
-    hr = hr.';
-end
-
-% All is good - finish construction
-H.hc = hc;
-H.hr = hr;
-
+    hr = varargin{2}; % Get the last row
+    
+    % ERROR (iv): Bad input type (non-vector)
+    if(~isvector(hr))
+        error('STRUCTMATS:HANKELMAT:constructor:badinput', newline, ...
+                'Input for last-row is not a vector.');
+    
+        % ERROR (iv): Bad input type (mismatch)
+    elseif( ~isa(hr, class(hc)))
+        error(['STRUCTMATS:HANKELMAT:constructor:badinput', newline, ...
+                'Inputs pair of types %s and %s is not supported for HANKELMAT.'],...
+                class(hc), class(hr));    
+    
+    % ERROR (iii): Bottom-left element mismatch
+    elseif(hc(end) ~= hr(1))
+        error('STRUCTMATS:HANKELMAT:constructor:firstelementmismatch', ...
+                'Given first column and row have different bottom left element.');
+    end
+    
+    % Transpose hr if needed
+    if(size(hr,1) > 1)
+        hr = hr.';
+    end
+    
+    % All is good - finish construction
+    H.hc = hc;
+    H.hr = hr;
+    
+    H.TH = toeplitzmat(flip(H.hc),H.hr);
 end
 end
 

@@ -35,5 +35,14 @@ classdef circulantmat < toeplitzmat
             C = constructor(C, varargin{:});       
         end
     end
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% CLASS PROPERTIES
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    properties (GetAccess = public, SetAccess = protected)
+        % 'd' is the fourier transform of the first column. This is used in
+        %   matrix multiplication. It is computed at construction time.
+        d
+    end
 end
 

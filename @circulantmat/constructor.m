@@ -70,5 +70,7 @@ end
 % All is good - finish construction
 C.tc = tc;
 C.tr = [tc(1) flip(tc(2:end)).']; % Let's store this for now.
+
+C.d = fft(C.tc);
 end
 

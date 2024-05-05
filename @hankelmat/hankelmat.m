@@ -42,6 +42,10 @@ classdef hankelmat < diagonalstructure
         % 'tc', 'tr' are the first column and first row, respectively
         hc 
         hr
+
+        % 'HT' is the toeplitzmat that will be used for matrix
+        % multiplications
+        TH = "uncomputed";
     end
 end
 
