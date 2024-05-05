@@ -3,8 +3,7 @@ function C = vertcat(varargin)
  
 
 warning(['Using Naive implementation of VERTCAT.', ...
-           'This should be overloaded to take advantage of the structures!'], ...
-           class(A), class(B));
+           'This should be overloaded to take advantage of the structures!']);
 C = [full(varargin{1});vertcat(varargin{2:end})];
 end
 

@@ -17,9 +17,9 @@ function res_toeps = structure_retained(T, I, J)
 %   implemented. This is not a priority, as the code will still work for
 %   these inputs, it just won't detect that the result should be toeplitz!
 
-% Easy case, subset of a single col/row
+% Result is a a vector or scalar -- we should return the full version.
 if(isscalar(I) || isscalar(J))
-    res_toeps = true;
+    res_toeps = false;
     return;
 end
 

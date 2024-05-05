@@ -37,40 +37,40 @@ classdef BinaryOperationTest < matlab.unittest.TestCase
         function scalarLeftPlus(testCase)
             [y, ytrue] = GeneralTest(testCase.sampleScalar, ...
                                    testCase.sampleStructured, ...
-                                   @(a,T) a+T);
-            testCase.verifyEqual(full(y), ytrue); % Check answer
+                                   testCase.binaryFxn);
+            testCase.verifyEqual(full(y), ytrue, 'RelTol', 1e-13); % Check answer
         end
         
         % scalar on the right
         function scalarRightPlus(testCase)
-            [y, ytrue] = GeneralTest(testCase.sampleScalar, ...
-                                   testCase.sampleStructured, ...
-                                   @(a,T) T+a);
-            testCase.verifyEqual(full(y), ytrue); % Check answer
+            [y, ytrue] = GeneralTest(testCase.sampleStructured, ...
+                                   testCase.sampleScalar, ...
+                                   testCase.binaryFxn);
+            testCase.verifyEqual(full(y), ytrue, 'RelTol', 1e-13); % Check answer
         end
 
         % matrix on the left
         function matrixLeftPlus(testCase)
             [y, ytrue] = GeneralTest(testCase.sampleMatrix, ...
                                    testCase.sampleStructured, ...
-                                   @(a,T) a+T);
-            testCase.verifyEqual(full(y), ytrue); % Check answer
+                                   testCase.binaryFxn);
+            testCase.verifyEqual(full(y), ytrue, 'RelTol', 1e-13); % Check answer
         end
         
         % matrix on the right
         function matrixRightPlus(testCase)
-            [y, ytrue] = GeneralTest(testCase.sampleMatrix, ...
-                                   testCase.sampleStructured, ...
-                                   @(a,T) T+a);
-            testCase.verifyEqual(full(y), ytrue); % Check answer
+            [y, ytrue] = GeneralTest(testCase.sampleStructured, ...
+                                   testCase.sampleMatrix, ...
+                                   testCase.binaryFxn);
+            testCase.verifyEqual(full(y), ytrue, 'RelTol', 1e-13); % Check answer
         end
         
         % two structured matrices
         function structuredPlus(testCase)
             [y, ytrue] = GeneralTest(testCase.sampleStructured, ...
                                    testCase.sampleStructured, ...
-                                   @(T1,T2) T1+T2);
-            testCase.verifyEqual(full(y), ytrue); % Check answer
+                                   testCase.binaryFxn);
+            testCase.verifyEqual(full(y), ytrue, 'RelTol', 1e-13); % Check answer
         end
     end
     
