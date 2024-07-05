@@ -16,7 +16,7 @@ qq = -q;
 %do fADI on cols. 
 [~,r] =size(G); %rank of RHS
 k = length(p);  
-%Im = speye(size(Dp)); 
+%Im = speye(size(Dp)); qr
 %Z(:, 1:r) = (Dp+Im*qq(1))\G;
 Z(:,1:r) = G./(Dp+qq(1))*(q(1)-p(1));
 %DD =  (q(1)-p(1)).*ones(r,1);
