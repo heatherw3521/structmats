@@ -93,7 +93,7 @@ classdef hss
                     case 'toeplitz'
                         obj = hss_from_symbol(varargin{2:end});
                     case 'nudft'
-                        obj = hss_nudftv(varargin{2:end});
+                        obj = hss_nudftv2(varargin{2:end});
                     otherwise
                         error('Unsupported constructor mode');
                 end

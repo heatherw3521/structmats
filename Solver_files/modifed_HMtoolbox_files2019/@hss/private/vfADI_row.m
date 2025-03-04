@@ -22,17 +22,18 @@ Dp  = nodes(ridx);
 pp = -p; 
 qq = -q; 
 %do fADI on cols. 
-%[~,r] =size(G); %rank of RHS
+[~,r] =size(G); %rank of RHS
 k = length(p);  
 %Im = speye(size(Dp)); 
 %Z(:, 1) = (Dp+Im*qq(1))\G;
-Z(:,1) = (G./(Dp + qq(1)) )*(q(1)-p(1)); 
-%DD =  (q(1)-p(1));
+Z(:,1:r) = (G./(Dp + qq(1)) )*(q(1)-p(1)); 
+%DD =  (q(1)-p(1))*ones(r,1);
 
     
 for i = 1:k-1 
+    gn = r*i+1:r*(i+1);
     %Z(:, i+1) = (Dp+pp(i)*Im)*((Dp+qq(i+1)*Im)\Z(:,i)); 
-    Z(:,i+1) = ( (Dp+pp(i)).*( Z(:,i)./(Dp + qq(i+1)) ) )*(q(i+1)-p(i+1));                
+    Z(:,gn) = ( (Dp+pp(i)).*( Z(:,gn-r)./(Dp + qq(i+1)) ) )*(q(i+1)-p(i+1));                
     %DD = [DD; (q(i+1)-p(i+1))];
 end
 

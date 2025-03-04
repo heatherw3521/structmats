@@ -1,16 +1,15 @@
-INVERSE NUDFT + TOEPLITZ SOLVER: 
 
-Working examples in tests/test_toeplitz_solver (for toeplitz system), 
-tests/test_INUDFT, tests/run_driverINUDFT, test_inudft_rect for Vandermonde (NUDFT) systems.
+This folder is currently a sandbox where we are developing fast solvers for structured matrices.
+Right now, the functionality is rather limited. This is primarily because we are 
+in the process of developing more flexible hierarchical NLA routines and class structures.
 
-extras: extra functions for setting up Toeplitz/Cauchy/Vandermonde matrices, 
-testing their compressibility properties.
 
-itersolv: Alex B folder, sinc-interp iterative solver + drivers. Includes conversion 
-for ADI-Vandermonde convention to NUFFT convention.  
 
-modified_HMtoolbox_files2019: modification of the HMtoolbox from Massei, Robol, Kressner. Includes all ADI compression routines, 
-constructor for HSS struc. object, HSS solvers. 
+For Toeplitz systems, we have square matrices with dimensions that are powers of 2. 
+We use a modified variant of the hm-toolbox for the HSS structures, and currently 
+this is rather limited. 
 
-tests: all final tests for direct inversion methods + additional tests for properties, verification of bounds, comparisons. 
 
+For Vandermonde NUDFT systems, we have a solver working for the overdetermined setting. 
+Right now, the solver doesn't work for square or underdetermined matrices. This is 
+under development. 

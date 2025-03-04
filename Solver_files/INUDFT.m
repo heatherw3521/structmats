@@ -26,8 +26,8 @@ if ~isempty(varargin)
     end
 end
 
+
 %% if the matrix is small, solve directly: 
-% (to do: optimize this choice)
 if length(nodes) < 257 && n < 257
     V = (nodes(:)).^(0:n-1); 
     x = V\b;
@@ -41,7 +41,7 @@ end
 w = exp(pi*1i/n); 
 nodes = nodes(:); 
 
-%we want to do ADI on submatrices of H, with DH - HL = ab^T. 
+%we want to do ADI on submatrices of H, with DH - HL = av^T. 
 
 %permute so that nodes are ordered wrt argument:
 args = mod(angle(nodes), 2*pi);

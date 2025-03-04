@@ -13,13 +13,6 @@ function H = hss_cauchytoeplitz(N,G, L, varargin)
 % so that it works with the HSS toolbox. 
 
 
-% TO DO (to further optimize): 
-% 1) add ULV-like solver, 
-% 2) replace fadi subroutine with mex to code fadi in C
-% 3) create option for using Hadamard product + cauchy (cauchy HSS factorization 
-% is a precomputation that works for all T). 
-
-
 %%
 % References: [1] Xia, Xi, Gu. "A Superfast Structured Solver
 % for Toeplitz Linear Systems via Randomized Sampling."

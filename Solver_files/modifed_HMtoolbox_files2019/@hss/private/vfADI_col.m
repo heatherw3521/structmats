@@ -2,7 +2,7 @@ function [U, J] = vfADI_col(sz, I, cidx,n, tot,tol, H)
 % performs ADI on the block C(ridx, cidx) of the matrix C = VF'. 
 % returns U, an approx to the rowspace, and indices J, where C approx = C(,J)*U. 
 %%
-
+%H = H.';
 % set up Sylvester operators and get ADI shifts: 
 w = exp(pi*1i/n); 
 %Dn = spdiags(w.^(2*cidx), 0, sz,sz); 
@@ -13,21 +13,24 @@ cq = -conj(q);
 %do fADI on cols. 
 Dn = conj(w.^(2*cidx)); 
 k = length(p);  
+[~,r]=size(H);
 %In = speye(size(Dn));   
 %Y(:,1) = (Dn+cp(1)*In)\H; 
-Y(:,1) = H./( Dn + cp(1)); 
-DD = (q(1)-p(1)) ; 
+Y(:,1:r) = H./( Dn + cp(1)); 
+DD = (q(1)-p(1))*ones(r,1) ; 
     
 for j = 1:k-1 
     %Y(:, j+1) = (Dn + cq(j)*In)*((Dn + cp(j+1)*In)\Y(:,j));
-    Y(:, j+1) = ( (Dn + cq(j)).*(Y(:,j)./(Dn + cp(j+1))) );
-    DD = [DD; (q(j+1)-p(j+1))];
+    %Y(:, j+1) = ( (Dn + cq(j)).*(Y(:,j)./(Dn + cp(j+1))) );
+    gn = r*j+1:r*(j+1);
+    Y(:, gn) = ( (Dn + cq(j)).*(Y(:,gn-r)./(Dn + cp(j+1))) );
+    DD = [DD; (q(j+1)-p(j+1))*ones(r,1)];
 end
 %% col-pivoted qr on YY to get ID: 
  % TO DO: add option to use strong RRQR:
  
 %YY = Y; 
-[~, U, P] = qr(spdiags(DD,0,k,k)*Y'); %col-piv QR
+[~, U, P] = qr(spdiags(DD,0,r*k,r*k)*Y'); %col-piv QR
 %[~,U,P] = qr(Y'); 
 %check for more decay in terms:
 dd = abs(diag(U))> tol*1e-2; k = min(sum(dd),k); 
