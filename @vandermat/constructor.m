@@ -111,7 +111,7 @@ else
     V.A = spdiags(x,0,numel(x),numel(x));
     B = speye(n);
     V.B = [B(end,:);B(1:end-1,:)];
-    V.u = x.^(n-1)-1;
+    V.u = x.^n-1;
     V.v = [zeros(n-1,1);1];
 end
 
