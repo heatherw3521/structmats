@@ -100,14 +100,19 @@ else
                 'The second input must be a positive integer.']);
     end
         
-    % Transpose x to make sure it's a column.
-    if(size(x,2) > 1)
-        x = x.';
-    end
+    % Transpose x to make sure it's a column vector.
+    x = reshape(x,[],1);
     
     % All is good - finish construction
     V.x = x;
     V.n = n;
+
+    % Get the displacement structure matrices
+    V.A = spdiags(x,0,numel(x),numel(x));
+    B = speye(n);
+    V.B = [B(end,:);B(1:end-1,:)];
+    V.u = x.^(n-1)-1;
+    V.v = [zeros(n-1,1);1];
 end
 
 end

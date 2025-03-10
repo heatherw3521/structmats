@@ -58,6 +58,12 @@ classdef vandermat < structuredmat
         % 'x', 'n' are the second column and number of columns, respectively
         x
         n
+
+        % 'A', 'B', 'u' and 'v' are the displacement structure matrices
+        A
+        B
+        u
+        v
     end
 end
 
