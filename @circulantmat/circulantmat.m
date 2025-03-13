@@ -24,9 +24,9 @@ classdef circulantmat < toeplitzmat
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     methods ( Access = public, Static = false )
         function C = circulantmat(varargin)
-            % The main toeplitzmat constructor!
+            % The main circulantmat constructor!
             
-            % Initialize empty TOEPLITZMAT
+            % Initialize empty CIRCULANTMAT
             if ( (nargin == 0) )
                 error('STRUCTMATS:CIRCULANTMAT:constructor:none', ...
                 'Cannot construct a Ciruclant matrix with no inputs');

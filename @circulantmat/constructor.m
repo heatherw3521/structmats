@@ -63,12 +63,35 @@ elseif(~islogical(tc) && ~isnumeric(tc))
 end
 
 % Flip-flop tc to ensure that it is m-by-1
-if(size(tc,2) > 1)
-    tc = tc.';
-end
+tc = reshape(tc,[],1);
 
 % All is good - finish construction
 C.tc = tc;
 C.tr = [tc(1) flip(tc(2:end)).']; % Let's store this for now.
+
+% Get Sylvester matrix equation quantities
+m = length(tc); n = m;
+tr = C.tr;
+
+% Form A and B, the circumshift matrices of the right size
+% Here, we make the choice of putting '1' in the top right entry
+A = speye(m);
+A = [A(end,:);A(1:end-1,:)];
+C.A = A;
+C.B = A;
+
+% Compute the right hand side
+% Only the first row and last column are nonzero
+y  = [flip(tc).' tr(2:end)];
+dr = y(1:n) - [tr(2:end) tr(1)];
+dc = [y(end-m+1) y(end:-1:end-m+2)].' - tc;
+u1 = [1;zeros(m-1,1)];
+v1 = dr.';
+u2 = [0;dc(2:end)];
+v2 = [zeros(n-1,1);1];
+
+% Form rank-2 right hand side
+C.U = [u1 u2];
+C.V = [v1 v2];
 end
 

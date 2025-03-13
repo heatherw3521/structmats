@@ -42,6 +42,12 @@ classdef toeplitzmat < diagonalstructure
         % 'tc', 'tr' are the first column and first row, respectively
         tc 
         tr
+        
+        % Sylvester matrix equation quantities
+        A
+        B
+        U
+        V
     end
 end
 

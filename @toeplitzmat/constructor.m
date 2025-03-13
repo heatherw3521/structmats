@@ -109,12 +109,8 @@ else
         
     % Flip-flop tc,tr to ensure that they are a column and a row, resp.
     % i.e. tc should be m-by-1 and tr 1-by-n
-    if(size(tc,2) > 1)
-        tc = tc.';
-    end
-    if(size(tr, 1) > 1)
-        tr = tr.';
-    end
+    tc = reshape(tc,[],1);
+    tr = reshape(tr,1,[]);
     
     % ERROR (iii): Inconsistent top-left element
     if(tc(1) ~= tr(1))
@@ -126,6 +122,32 @@ else
     % All is good - finish construction
     T.tc = tc;
     T.tr = tr;
+
+    % Get Sylvester matrix equation quantities
+    m = length(tc); n = length(tr);
+
+    % Form A and B, the circumshift matrices of the right size
+    % Here, we make the choice of putting '1' in the top right entry
+    A = speye(m);
+    A = [A(end,:);A(1:end-1,:)];
+    B = speye(n);
+    B = [B(end,:);B(1:end-1,:)];
+    T.A = A;
+    T.B = B;
+
+    % Compute the right hand side
+    % Only the first row and last column are nonzero
+    y  = [flip(tc).' tr(2:end)];
+    dr = y(1:n) - [tr(2:end) tr(1)];
+    dc = [y(end-m+1) y(end:-1:end-m+2)].' - tc;
+    u1 = [1;zeros(m-1,1)];
+    v1 = dr.';
+    u2 = [0;dc(2:end)];
+    v2 = [zeros(n-1,1);1];
+    
+    % Form rank-2 right hand side
+    T.U = [u1 u2];
+    T.V = [v1 v2];
 end
 end
 
