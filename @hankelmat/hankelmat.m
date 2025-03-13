@@ -42,6 +42,12 @@ classdef hankelmat < diagonalstructure
         % 'tc', 'tr' are the first column and first row, respectively
         hc 
         hr
+
+        % Sylvester matrix equation quantities
+        A
+        B
+        U
+        V
     end
 end
 

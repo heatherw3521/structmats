@@ -80,7 +80,7 @@ if(size(hc, 2) > 1)
 end
 
 % CASE 1: single vector input
-if( numel(varargin) == 1)
+if(numel(varargin) == 1)
     H.hc = hc;
     H.hr = [hc(end) zeros(1,size(hc,1)-1)];
 
@@ -106,14 +106,37 @@ elseif(hc(end) ~= hr(1))
 end
 
 % Transpose hr if needed
-if(size(hr,1) > 1)
-    hr = hr.';
-end
+hr = reshape(hr,1,[]);
 
 % All is good - finish construction
 H.hc = hc;
 H.hr = hr;
 
+    % Get Sylvester matrix equation quantities
+    m = length(hc); n = length(hr);
+
+    % Form A and B, the circumshift matrices of the right size
+    % Here, we make the choice of putting '1' in the top right entry
+    A = speye(m);
+    A = [A(end,:);A(1:end-1,:)];
+    B = speye(n);
+    B = [B(:,end) B(:,1:end-1)];
+    H.A = A;
+    H.B = B';
+
+    % Compute the right hand side
+    % Only the first row and first column are nonzero
+    y  = [hc.' hr(2:end)];
+    dc = [hc(end);hc(1:end-1)] - y(end-m+1:end).';
+    dr = hr - [y(n) y(1:n-1)];
+    u1 = [1;zeros(m-1,1)];
+    v1 = dr.';
+    u2 = [0;dc(2:end)];
+    v2 = [1;zeros(n-1,1)];
+
+    % Stack right hand side
+    U = [u1 u2];
+    V = [v1 v2];
 end
 end
 
