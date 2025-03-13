@@ -135,8 +135,8 @@ H.hr = hr;
     v2 = [1;zeros(n-1,1)];
 
     % Stack right hand side
-    U = [u1 u2];
-    V = [v1 v2];
+    H.U = [u1 u2];
+    H.V = [v1 v2];
 end
 end
 
