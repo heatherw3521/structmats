@@ -1,6 +1,6 @@
 function [G, H] = toep_gens(tr, tc) 
 %given a toeplitz matrix with 
-% rowvec t0, colvec t1, 
+% rowvec tr, colvec tc, 
 % this constructs generators GH^*
 % so that Q_1T - TQ_2 = GH^*
 tr = tr(:); 

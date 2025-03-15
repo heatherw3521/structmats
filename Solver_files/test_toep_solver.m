@@ -2,7 +2,7 @@
 clear all
 close all
 %%
-n = 2^13; 
+n = 2^10; 
 m = 2*n; 
 tr = randn(n,1); 
 tc = randn(m,1); 
@@ -12,8 +12,8 @@ T = full(toeplitz(tc, tr));
 xt = randn(n,1);
 b = T*xt; 
 %%
-%x = structsolv_toeplitz(tc,tr, b);
-x = Tm\b;
+x = structsolv_toeplitz(tc,tr, b);
+%x = Tm\b;
 %%
 norm(xt-x)/norm(xt)
 %%

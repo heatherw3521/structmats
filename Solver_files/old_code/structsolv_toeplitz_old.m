@@ -8,11 +8,8 @@ function varargout = structsolv_toeplitz(tc,tr, b, varargin)
 % The default setting for tol is 1e-11. 
 %  
 % Currently this solver is extremely limited; can handle square 
-% systems with dimensions that are powers of 2 as well as 
-% overdetermined systems. 
-% 
-% Once we have our HSS library installed, this will be fixed.
-
+% systems with dimensions that are powers of 2. Once we have our
+% HSS library installed, this will be fixed.
 
 % References: 
 % [1] Xia, Xi, Gu. "A Superfast Structured Solver
@@ -47,77 +44,79 @@ if n <257 && m < 257
 end
 
 %% Part 1: transform to Cauchy system: 
-% For rectangular, we use disp struct ZgT-TZ1 = GH', where Zg is the circumshift
-% matrix except that Zg(1,end)=g. 
-%
-% For square, we use disp struct Z1T-TZ_{-1} = GH' (as in Xia's paper). 
- 
+
+N = (1:n).'; % nodes are w.^(2*(M-1))
+M = (1:m).'; 
 wn = exp(pi*1i/n); 
 wm = exp(pi*1i/m); 
 
 %get Toeplitz generators:
-if m==n
-    error('will input soon...')
- %if ~(log2(m) == ceil(log2(m))) % check a power of 2
- %    error('structsolv_toeplitz: for now, the fast solver requires dimensions to be powers of 2.')
- %end
- %warning off
- %H = hss('cauchytoeplitz', n, G, L,'tol', tol);
- %warning on
- %x = H\b;
-elseif m < n
-    error('structmats:structsolv_toeplitz: fast solver for underdetermined systems not yet implemented.')
-else
-q = exp(1i*2*pi*pi/2/m); % ensures that the nodes are shifted off ROU.
-[GG, LL] = toep_gens_rect(tr, tc,q^m); 
+[GG, LL] = toep_gens_rect(tr, tc); 
         
 %transform to Cauchy-like generators:
- Qr = spdiags((wn.^(2*(1:n))).', 0, n,n);
- 
- Ql = spdiags((q.^(1:m)).', 0, m, m);
-
- G = sqrt(m)*ifft(Ql*GG);
- L = sqrt(n)*ifft(Qr*LL);
+ D0 = spdiags(wn.^(N-1), 0, n,n);
+ if m==n
+    G = sqrt(m)*ifft(GG);
+    L = sqrt(n)*ifft(D0*LL);
+ else
+    G = sqrt(m)*ifft(GG)*wn;
+    L = sqrt(n)*ifft(D0*LL);
+ end
 
  %transform RHS: 
- b = sqrt(m)*ifft(Ql*b); 
+ b = sqrt(m)*ifft(b); 
  
 %% Part 2: HSS 
 % build HSS approx to C:
 %
- nodes = q*(wm.^(2*(0:m-1))).';
+if m==n
+ if ~(log2(m) == ceil(log2(m))) % check a power of 2
+     error('structsolv_toeplitz: for now, the fast solver requires dimensions to be powers of 2.')
+ end
+ warning off
+ H = hss('cauchytoeplitz', n, G, L,'tol', tol);
+ warning on
+ x = H\b;
+else
+ %error('structsolv_toeplitz: for now, the fast solver works on square systems with dimensions that are powers of 2')
+ nodes = (wm.^(2*(M-1)))*wn;
  modes = n;
  warning off
  %permute so that nodes are ordered wrt argument:
  args = mod(angle(nodes), 2*pi);
-[args, p] = sort(args); 
+ [args, p] = sort(args); 
 %circshift so nodes are ordered appropriately for subdivisions. 
  kk = find(args > pi/n, 1); 
- p = circshift(p, -kk+1); 
- nodes = nodes(p); % permutation equiv to shifting rows of system
+ 
+ %p = circshift(p, -kk+1); 
+ p = (1:m).';
+ nodes = nodes(p); % D = diag(nodes)
  G = G(p,:);
  b = b(p,:);
 
  warning off
  H = hss('nudft', nodes, G, L',modes,'tol', tol, 'toep');
  warning on
-%%  
- nodes = nodes(p);
- rou = wn.^(2*(1:n)).';
- C = (1./(nodes-rou.')).*(G*L'); 
- xx = C\b;
- Ln = urv(H); 
- x = urv_solve(Ln,b);
- x = Qr'*fft(xx)/sqrt(n);
- if isreal(tc)&& isreal(tr)
-     x = real(x);
- end
-
+%%
+   % aa = w2.^(2*(0:m-1))*w1; 
+    bb = wn.^(2*N).';
+    %C = bsxfun(@minus, nodes, bb);
+    C = nodes-bb; 
+    C = 1./C; 
+    H2 = (G*L').*C;
+%%
+x = H2\b; 
+ %Ln = urv(H); 
+ %x = urv_solve(Ln,b);
+end
+%% Part 4:
+% transform x back: 
+ 
+ x = D0'*fft(x)/sqrt(n); 
  if nargout==1
      varargout = {x};
  else
-     varargout = {Ln,p, x};
+     varargout = {Ln,pp, x};
  end
-end
 
 end
