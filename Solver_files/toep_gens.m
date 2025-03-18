@@ -2,7 +2,7 @@ function [G, H] = toep_gens(tr, tc)
 %given a toeplitz matrix with 
 % rowvec tr, colvec tc, 
 % this constructs generators GH^*
-% so that Q_1T - TQ_2 = GH^*
+% so that Z_1T - TZ_{-1} = GH^*
 tr = tr(:); 
 tc = tc(:); 
 n = length(tr); 

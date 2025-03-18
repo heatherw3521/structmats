@@ -1,9 +1,10 @@
-% test rect Toeplitz: 
+% test fast Toeplitz solver: 
 clear all
 close all
 %%
-n = 2^12+5; 
-m = 3*n+12; 
+n = 2^13; 
+m = 2*n+12; 
+%m = n;
 tr = randn(n,1) + 1i*randn(n,1); 
 tc = randn(m,1); 
 tc(1)=tr(1);

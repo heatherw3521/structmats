@@ -7,11 +7,11 @@ function varargout = structsolv_toeplitz(tc,tr, b, varargin)
 % structsolv_toeplitz(tc,tr, b, 'tol', tol) sets accuracy to tol.
 % The default setting for tol is 1e-11. 
 %  
-% Currently this solver is extremely limited; can handle square 
+% Currently this solver is extremely limited; It can handle square 
 % systems with dimensions that are powers of 2 as well as 
-% overdetermined systems. 
+% overdetermined (rectangular tall--thin) systems. 
 % 
-% Once we have our HSS library installed, this will be fixed.
+% Once we have our HSS library installed, it will be more versatile.
 
 
 % References: 
@@ -20,7 +20,7 @@ function varargout = structsolv_toeplitz(tc,tr, b, varargin)
 % SIMAX, Vol. 33 No 3, p.837-858, 2012.
 %
 % [2] Beckermann, Kressner, Wilber. "Compression properties in large 
-% Toeptlitz-like matrices" https://arxiv.org/abs/2502.09823
+% Toeptlitz-like matrices", 2025,  https://arxiv.org/abs/2502.09823
 % 
 
 %%
@@ -30,13 +30,12 @@ if ~isempty(varargin)
     if strcmpi(varargin{1}, 'tol')
         tol = varargin{2}; 
     else
-        error('could not parse input')
+        error('structmats:structsolve_toeplitz:could not parse input')
     end
 end
 
 n = length(tr); 
 m = length(tc);
-block_size = 256;
 
 %% if the matrix is small, solve directly: 
 if n <257 && m < 257
@@ -57,14 +56,37 @@ wm = exp(pi*1i/m);
 
 %get Toeplitz generators:
 if m==n
-    error('will input soon...')
- %if ~(log2(m) == ceil(log2(m))) % check a power of 2
- %    error('structsolv_toeplitz: for now, the fast solver requires dimensions to be powers of 2.')
- %end
- %warning off
- %H = hss('cauchytoeplitz', n, G, L,'tol', tol);
- %warning on
+ if ~(log2(m) == ceil(log2(m))) % check a power of 2
+     error('structsolv_toeplitz: for now, the fast solver for square systems requires dimensions to be powers of 2.')
+ end
+
+%get Toeplitz generators:
+ [GG, LL] = toep_gens(tr, tc); 
+        
+%transform to Cauchy-like generators:
+ D0 = spdiags(wn.^((1:n).'-1), 0, n,n);
+ G = sqrt(m)*ifft(GG);
+ L = sqrt(n)*ifft(D0*LL);
+ 
+ %transform RHS: 
+ b = sqrt(m)*ifft(b);
+
+ warning off
+ H = hss('cauchytoeplitz', n, G, L,'tol', tol);
+ warning on
  %x = H\b;
+ Ln = ulv(H);
+ x = ulv_solve(Ln, b);
+ x = D0'*fft(x)/sqrt(n); 
+ if isreal(tr)&& isreal(tc)&& isreal(b)
+     x = real(x);
+ end
+ if nargout==1
+     varargout = {x};
+ else
+     varargout = {Ln, x};
+ end
+
 elseif m < n
     error('structmats:structsolv_toeplitz: fast solver for underdetermined systems not yet implemented.')
 else
@@ -73,9 +95,7 @@ q = exp(1i*2*pi*pi/2/m); % ensures that the nodes are shifted off ROU.
         
 %transform to Cauchy-like generators:
  Qr = spdiags((wn.^(2*(1:n))).', 0, n,n);
- 
  Ql = spdiags((q.^(1:m)).', 0, m, m);
-
  G = sqrt(m)*ifft(Ql*GG);
  L = sqrt(n)*ifft(Qr*LL);
 
@@ -90,32 +110,21 @@ q = exp(1i*2*pi*pi/2/m); % ensures that the nodes are shifted off ROU.
  warning off
  %permute so that nodes are ordered wrt argument:
  args = mod(angle(nodes), 2*pi);
-[args, p] = sort(args); 
+ [args, p] = sort(args); 
 %circshift so nodes are ordered appropriately for subdivisions. 
  kk = find(args > pi/n, 1); 
  p = circshift(p, -kk+1); 
  nodes = nodes(p); % permutation equiv to shifting rows of system
  G = G(p,:);
  b = b(p,:);
- %G = G(:,1); L = L(:,1);
  warning off
  H = hss('nudft', nodes, G, L',modes,'tol', tol, 'toep');
- warning on
-%%  
- % nodes = nodes(p);
- % rou = wn.^(2*(1:n)).';
- % C = (1./(nodes-rou.')).*(G*L'); 
- % xx = C\b;
-
- % test buildcauchy
- %J = (1:m);
- %K = (1:n);
- %AA = buildcauchy(J, K, n, nodes,G, L);
+ warning off
 
  Ln = urv(H); 
  x = urv_solve(Ln,b);
  x = Qr'*fft(x)/sqrt(n);
- if isreal(tc)&& isreal(tr)
+ if isreal(tc)&& isreal(tr) && isreal(b)
      x = real(x);
  end
 
