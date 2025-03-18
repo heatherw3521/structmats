@@ -31,7 +31,7 @@ Z(:,1:r) = (G./(Dp + qq(1)) )*(q(1)-p(1));
 
     
 for i = 1:k-1 
-    gn = r*i+1:r*(i+1);
+    gn = (r*i+1):(r*(i+1));
     %Z(:, i+1) = (Dp+pp(i)*Im)*((Dp+qq(i+1)*Im)\Z(:,i)); 
     Z(:,gn) = ( (Dp+pp(i)).*( Z(:,gn-r)./(Dp + qq(i+1)) ) )*(q(i+1)-p(i+1));                
     %DD = [DD; (q(i+1)-p(i+1))];
@@ -43,7 +43,7 @@ end
 [~,U,P] = qr(Z');
 %dd = abs(diag(U))> tol*1e-2; k = min(sum(dd),k); 
 % DO NOT CHECK diag decay because we want k to match col. choice.
-
+k = k*r;
 [v, ~] = find(P'); %vector of indices for LHS
 [J, ~] = find(P); %vector of indices for RHS 
 U = U';

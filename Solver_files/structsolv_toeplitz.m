@@ -97,18 +97,24 @@ q = exp(1i*2*pi*pi/2/m); % ensures that the nodes are shifted off ROU.
  nodes = nodes(p); % permutation equiv to shifting rows of system
  G = G(p,:);
  b = b(p,:);
-
+ %G = G(:,1); L = L(:,1);
  warning off
  H = hss('nudft', nodes, G, L',modes,'tol', tol, 'toep');
  warning on
 %%  
- nodes = nodes(p);
- rou = wn.^(2*(1:n)).';
- C = (1./(nodes-rou.')).*(G*L'); 
- xx = C\b;
+ % nodes = nodes(p);
+ % rou = wn.^(2*(1:n)).';
+ % C = (1./(nodes-rou.')).*(G*L'); 
+ % xx = C\b;
+
+ % test buildcauchy
+ %J = (1:m);
+ %K = (1:n);
+ %AA = buildcauchy(J, K, n, nodes,G, L);
+
  Ln = urv(H); 
  x = urv_solve(Ln,b);
- x = Qr'*fft(xx)/sqrt(n);
+ x = Qr'*fft(x)/sqrt(n);
  if isreal(tc)&& isreal(tr)
      x = real(x);
  end

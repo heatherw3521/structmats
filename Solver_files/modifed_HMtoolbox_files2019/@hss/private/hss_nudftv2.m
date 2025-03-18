@@ -62,7 +62,7 @@ if H.leafnode
     Ir = [w.^(2*(cidxl(1))), w.^(2*cidxl(end))];
     Ir = [flip(Ir.*[w.^(-1), w.^(1)]), Ir];
     [~, ~, ~, cr] = mobiusT(Ir);
-    kr = ceil(rho/pi^2*log(4/tol)*log(16*cr));
+    kr = ceil(rho/pi^2*log(4/tol)*log(16*cr)); %bound on rank
 
     % rank of HSS block column:
     M = length(nodes);
@@ -79,8 +79,11 @@ if H.leafnode
     %I = [nodes(ridx(1)),nodes(
     % ridx(end)), w.^(2*(cidxl(1))), w.^(2*cidxl(end))];
      
-    kk = min([kr,kc,m, n]); %smallest number is the rank
-    
+    if istoep
+        kk = ceil(min([kr,kc,m, n])/2)+4; %smallest number is the max # ADI steps
+    else
+        kk = min([kr,kc,m, n])+2; 
+    end
 
     % use fadi to build an ID for each block:
 
@@ -151,7 +154,12 @@ else
       [~, ~, ~, cr] = mobiusT(Ic);
       kc = ceil(rho/pi^2*log(4/tol)*log(16*cr));
       %bb = length(cidx2);
-      kk = min([kr,kc,m, n]); %smallest number is the rank
+
+      if istoep
+        kk = ceil(min([kr,kc,m, n])/2)+4; %smallest number is max # ADI steps
+      else
+        kk = min([kr,kc,m, n])+2;
+      end
 
       
 

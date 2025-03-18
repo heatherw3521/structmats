@@ -1,4 +1,4 @@
-function AA = buildcauchy_old(J, K, N, nodes,G, L)
+function AA = buildcauchy(J, K, N, nodes,G, L)
 %build the cauchy matrix from the given indices:
 J = J(:); 
 K = K(:); 
