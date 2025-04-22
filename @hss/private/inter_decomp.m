@@ -31,13 +31,15 @@ if strcmp(side,'columns')
     [~,R,P] = qr(A,'econ','vector');
 
     if strcmp(cutofftype,'threshold')
-        k = rank(A,cutoffval);
-        1;
+        k = rank(A/norm(A),cutoffval);
     else
         k = min(cutoffval,min(size(A,1),size(A,2)));
     end
     R_k = R(1:k,1:k);
     cols = P(1:k);
+    if k<4
+        disp(cond(R_k.' * R_k))
+    end
     Z = (R_k.' * R_k)\(A(:,cols)'*A);
     rows = cols;
 elseif strcmp(side,'rows')

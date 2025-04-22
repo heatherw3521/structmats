@@ -13,7 +13,7 @@ for k=1:8
     randerrors(k) = norm(A*ones(32,1) - H*ones(32,1));
 end
 % this looks poor, lets explore!
-loglog(1:8,randerrors)
+semilogy(1:8,randerrors)
 
 % we can manually look at an off-diag block at the leaf level...
 % (with k=8)
@@ -29,10 +29,17 @@ norm(H.A22.A21.Z*H.A22.A21.lrcomponent*H.A22.A21.Y - A(25:32,17:24))
 norm(blkdiag(H.A11.A12.Z,H.A11.A21.Z)*H.A12.Z*H.A12.lrcomponent*H.A12.Y*blkdiag(H.A22.A21.Y,H.A22.A12.Y)-A(1:16,17:32))
 % this is so much worse
 % parts of it look ok
-blkdiag(H.A11.A12.Z,H.A11.A21.Z)*H.A12.Z*H.A12.lrcomponent*H.A12.Y*blkdiag(H.A22.A21.Y,H.A22.A12.Y)-A(1:16,17:32);
+blkdiag(H.A11.A12.Z,H.A11.A21.Z)*H.A12.Z*H.A12.lrcomponent*H.A12.Y*blkdiag(H.A22.A21.Y,H.A22.A12.Y)-A(1:16,17:32)
 % just returning the matrix output itself we see several entries exactly 0 along 8 rows/columns
 % which rows and columns we are accurate along changes with the random
 % matrix so I'd conclude there isn't an ordering issue
+
+B = A(1:16,17:32);
+s = svd(B)
+eckert = s(9)/s(1)
+Bapprox = blkdiag(H.A11.A12.Z,H.A11.A21.Z)*H.A12.Z*H.A12.lrcomponent*H.A12.Y*blkdiag(H.A22.A21.Y,H.A22.A12.Y);
+norm(Bapprox-B)/norm(B)
+
 
 %% Case 2
 % lets get bigger and rectangular (scary!)
@@ -105,7 +112,7 @@ norm(blkdiag(od_block1.Z,od_block2.Z)*od_blockp.Z*od_blockp.lrcomponent*od_block
 disp('--------')
 % i will repeat the exact same code but now with a threshold = 1e-6 instead
 % of 1e-12
-H = hss(Crect,blocksize = blocksize,threshold = 1e-6);
+H = hss(Crect,blocksize = blocksize,threshold = 1e-12);
 
 od_block1 = H.A11.A11.A11.A12;
 od_block2 = H.A11.A11.A11.A21;
@@ -122,6 +129,13 @@ norm(blkdiag(od_block1.Z,od_block2.Z)*od_blockp.Z*od_blockp.lrcomponent*od_block
 
 % and would you look at that. all 5 errors are better with a worse threshold (and hence a smaller k)
 % :(
+
+
+B = Crect(od_blockp.Ir(1):od_blockp.Ir(2),od_blockp.Ic(1):od_blockp.Ic(2));
+s = svd(B);
+eckert = s(4)/s(1)
+Bapprox =blkdiag(od_block1.Z,od_block2.Z)*od_blockp.Z*od_blockp.lrcomponent*od_blockp.Y*blkdiag(od_block4.Y,od_block3.Y);
+norm(Bapprox-B)/norm(B)
 
 
 %% TODO list
