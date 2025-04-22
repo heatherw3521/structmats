@@ -1,0 +1,130 @@
+
+%% Case 1
+% generating a random square 32x32 matrix with integer entries
+A = randi(10,32,32);
+
+
+% blocksize of 8 and k going from 1 to 8
+% compress A and then compute matvec with the ones vector and compute error
+% from true matvec
+randerrors = zeros(1,8);
+for k=1:8
+    H = hss(A,blocksize = 8,k = k);
+    randerrors(k) = norm(A*ones(32,1) - H*ones(32,1));
+end
+% this looks poor, lets explore!
+loglog(1:8,randerrors)
+
+% we can manually look at an off-diag block at the leaf level...
+% (with k=8)
+norm(H.A11.A12.Z*H.A11.A12.lrcomponent*H.A11.A12.Y - A(1:8,9:16))
+% this had very low error so at the leaf level its ok
+% the other three exhibit the same property
+norm(H.A11.A21.Z*H.A11.A21.lrcomponent*H.A11.A21.Y - A(9:16,1:8))
+norm(H.A22.A12.Z*H.A22.A12.lrcomponent*H.A22.A12.Y - A(17:24,25:32))
+norm(H.A22.A21.Z*H.A22.A21.lrcomponent*H.A22.A21.Y - A(25:32,17:24))
+
+
+% now lets go up to the parent!!
+norm(blkdiag(H.A11.A12.Z,H.A11.A21.Z)*H.A12.Z*H.A12.lrcomponent*H.A12.Y*blkdiag(H.A22.A21.Y,H.A22.A12.Y)-A(1:16,17:32))
+% this is so much worse
+% parts of it look ok
+blkdiag(H.A11.A12.Z,H.A11.A21.Z)*H.A12.Z*H.A12.lrcomponent*H.A12.Y*blkdiag(H.A22.A21.Y,H.A22.A12.Y)-A(1:16,17:32);
+% just returning the matrix output itself we see several entries exactly 0 along 8 rows/columns
+% which rows and columns we are accurate along changes with the random
+% matrix so I'd conclude there isn't an ordering issue
+
+%% Case 2
+% lets get bigger and rectangular (scary!)
+warning off
+m = 7e2; n = 5e2;
+blocksize = 40;
+% creating a well-spaced cauchy matrix 
+% (NOTE: ID is not utilizing fadi as of now)
+X = linspace(0,1,n);
+Y = linspace(3,4,m).';
+C = 1 ./ (X-Y);
+Crect = C(1:m,1:n);
+
+% same deal as before
+cauchykerrors = zeros(1,blocksize);
+for k=1:blocksize
+    H = hss(Crect,blocksize = blocksize,k = k);
+    cauchykerrors(k) = norm(Crect*ones(n,1) - H*ones(n,1));
+end
+% this is NOT good, past a certain k error starts to balloon
+% 1. this feels counterintuitive. shouldn't error drop as k increases as it
+% does in the random matrix case. 
+figure
+semilogy(1:blocksize,cauchykerrors)
+
+
+% what if we forget prescribing k and instead choose a tolerance
+cauchytolerrors = zeros(1,16);
+tols = zeros(1,16);
+for i=1:16
+    tols(i) = 10^(-i);
+    H = hss(Crect,blocksize = blocksize,threshold = tols(i));
+    cauchytolerrors(i) = norm(Crect*ones(n,1) - H*ones(n,1));
+end
+% same issue
+% higher tolerance -> larger k -> worse (???) error
+figure
+loglog(tols,cauchytolerrors)
+
+%% Some manual fun!
+warning off
+m = 7e2; n = 5e2;
+blocksize = 40;
+X = linspace(0,1,n);
+Y = linspace(3,4,m).';
+C = 1 ./ (X-Y);
+Crect = C(1:m,1:n);
+H = hss(Crect,blocksize = blocksize,threshold = 1e-12);
+
+% go to the leaf level
+od_block1 = H.A11.A11.A11.A12;
+od_block2 = H.A11.A11.A11.A21;
+od_block3 = H.A11.A11.A22.A12;
+od_block4 = H.A11.A11.A22.A21;
+
+% well doesn't this look nice
+norm(od_block1.Z*od_block1.lrcomponent*od_block1.Y - Crect(od_block1.Ir(1):od_block1.Ir(2),od_block1.Ic(1):od_block1.Ic(2)))
+% the other three exhibit the same property
+norm(od_block2.Z*od_block2.lrcomponent*od_block2.Y - Crect(od_block2.Ir(1):od_block2.Ir(2),od_block2.Ic(1):od_block2.Ic(2)))
+norm(od_block3.Z*od_block3.lrcomponent*od_block3.Y - Crect(od_block3.Ir(1):od_block3.Ir(2),od_block3.Ic(1):od_block3.Ic(2)))
+norm(od_block4.Z*od_block4.lrcomponent*od_block4.Y - Crect(od_block4.Ir(1):od_block4.Ir(2),od_block4.Ic(1):od_block4.Ic(2)))
+
+od_blockp = H.A11.A11.A12;
+
+% now lets go up to the parent!!
+norm(blkdiag(od_block1.Z,od_block2.Z)*od_blockp.Z*od_blockp.lrcomponent*od_blockp.Y*blkdiag(od_block4.Y,od_block3.Y)-Crect(od_blockp.Ir(1):od_blockp.Ir(2),od_blockp.Ic(1):od_blockp.Ic(2)))
+% error is still small but its worse. if i keep going up i guarentee i'll
+% see the same problem as in the random matrix case where the error from
+% level to level balloons. 
+disp('--------')
+% i will repeat the exact same code but now with a threshold = 1e-6 instead
+% of 1e-12
+H = hss(Crect,blocksize = blocksize,threshold = 1e-6);
+
+od_block1 = H.A11.A11.A11.A12;
+od_block2 = H.A11.A11.A11.A21;
+od_block3 = H.A11.A11.A22.A12;
+od_block4 = H.A11.A11.A22.A21;
+
+norm(od_block1.Z*od_block1.lrcomponent*od_block1.Y - Crect(od_block1.Ir(1):od_block1.Ir(2),od_block1.Ic(1):od_block1.Ic(2)))
+norm(od_block2.Z*od_block2.lrcomponent*od_block2.Y - Crect(od_block2.Ir(1):od_block2.Ir(2),od_block2.Ic(1):od_block2.Ic(2)))
+norm(od_block3.Z*od_block3.lrcomponent*od_block3.Y - Crect(od_block3.Ir(1):od_block3.Ir(2),od_block3.Ic(1):od_block3.Ic(2)))
+norm(od_block4.Z*od_block4.lrcomponent*od_block4.Y - Crect(od_block4.Ir(1):od_block4.Ir(2),od_block4.Ic(1):od_block4.Ic(2)))
+
+od_blockp = H.A11.A11.A12;
+norm(blkdiag(od_block1.Z,od_block2.Z)*od_blockp.Z*od_blockp.lrcomponent*od_blockp.Y*blkdiag(od_block4.Y,od_block3.Y)-Crect(od_blockp.Ir(1):od_blockp.Ir(2),od_blockp.Ic(1):od_blockp.Ic(2)))
+
+% and would you look at that. all 5 errors are better with a worse threshold (and hence a smaller k)
+% :(
+
+
+%% TODO list
+% build a helper function to construct any specific offdiag block I want and use it to debug
+% implement svd decomp (maybe ID is the problem?) (
+% test matvecs with other vectors (this feels pointless given the ones vector doesnt even work but maybe I'll notice something)

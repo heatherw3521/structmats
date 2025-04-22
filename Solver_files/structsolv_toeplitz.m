@@ -37,7 +37,7 @@ block_size = 256;
 
 %% if the matrix is small, solve directly: 
 if n <257 && m < 257
-    T = toeplitz(tc,tr); 
+    T = toeplitz(tc,tr);
     x = T\b;
     varargout = {x};
     return
