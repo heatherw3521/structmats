@@ -67,6 +67,7 @@ classdef hss
         function y = mtimes(H1,H2)
             y = hss_matvec(H1,H2);
         end
+
         % function sref = subsref(obj,s)
         %       switch s(1).type
         %           case '()'
