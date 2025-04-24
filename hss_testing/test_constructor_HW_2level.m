@@ -65,6 +65,9 @@ norm(blkdiag(H.A11.A12.Z,H.A11.A21.Z)*H.A12.Z*H.A12.lrcomponent*H.A12.Y*blkdiag(
 norm(blkdiag(H.A11.A12.Z,H.A11.A21.Z)*H.A12.Z*H.A12.lrcomponent*H.A12.Y*blkdiag(H.A22.A21.Y,H.A22.A12.Y)-A(1:16,17:32))
 
 %%
+% check matvec: 
+v = rand(m,1);
+mult_err = norm(H*v-A*v)
 
 
 
