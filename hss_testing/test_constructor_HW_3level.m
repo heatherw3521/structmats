@@ -43,5 +43,25 @@ norm(blkdiag(H.A22.A22.A12.Z,H.A22.A22.A21.Z)*H.A22.A21.Z*H.A22.A21.lrcomponent.
     *H.A22.A21.Y*blkdiag(H.A22.A11.A21.Y,H.A22.A11.A12.Y)-C(49:64,33:48))
 %%
 % level 3 block: 
+Z1 = blkdiag(H.A11.A11.A12.Z, H.A11.A11.A21.Z, H.A11.A22.A12.Z, H.A11.A22.A21.Z);
+Z2 = blkdiag(H.A11.A12.Z, H.A11.A21.Z);
+M = H.A12.Z*H.A12.lrcomponent*H.A12.Y; 
+Y1 = blkdiag(H.A22.A11.A21.Y, H.A22.A11.A12.Y, H.A22.A22.A21.Y, H.A22.A22.A12.Y);
+Y2 = blkdiag(H.A22.A21.Y, H.A22.A12.Y);
+%%
+B = Z1*Z2*M*Y2*Y1;
+%%
+norm(B - C(1:32, 33:64))
+%%
+% test level 3 matvec: 
+
+v = ones(m,1);
+norm(C*v-H*v)
+%%
+% test identity
+
+norm(C-H*eye(m))
+%%
+
 
 
