@@ -5,7 +5,7 @@ clear all
 close all
 %%
 m = 32; 
-n = m; 
+n = 32; 
 b = 8; % blocksize
 r = 4; %rank
 A = rand(m,r)*rand(r,n) + eye(m);

@@ -7,6 +7,13 @@ close all
 m = 37; 
 n = m; 
 b = 10; % blocksize
+% if b = 9 we see issues with the matvec. if b = 10 this is corrected.
+% when b = 9 there is a single level H.A11.A11 where the block is 10 by 10,
+% so it gets cut into a 5 by 5 collection (level 3). However, the other
+% level 2 blocks are not cut smaller so this causes some issues in the
+% matvec. It is avoided if one uses 
+
+
 r = 4; %rank
 A = rand(m,r)*rand(r,n) + eye(m);
 % top half matrix:
