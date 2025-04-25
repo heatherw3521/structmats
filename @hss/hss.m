@@ -68,14 +68,16 @@ classdef hss
             y = hss_matvec(H1,H2);
         end
 
-        % function sref = subsref(obj,s)
-        %       switch s(1).type
-        %           case '()'
-        %               sref = extract(obj,s);
-        %           otherwise 
-        %               sref = builtin('subsref',obj,s);
-        %       end % switchA
-        %   end % function subsref
+        function s = subsref(obj,ind)
+            switch ind(1).type
+                case '()'
+                    s = extract(obj,cell2mat(ind.subs(1)),cell2mat(ind.subs(2)), 0, 0);
+                otherwise
+                    s = builtin('subsref',obj,ind);
+            end
+        end
+
+
     end
 end
 
