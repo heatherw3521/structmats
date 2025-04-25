@@ -4,9 +4,9 @@
 clear all
 close all
 %%
-m = 32; 
-n = 32; 
-b = 8; % blocksize
+m = 39; 
+n = m; 
+b = 9; % blocksize
 r = 4; %rank
 A = rand(m,r)*rand(r,n) + eye(m);
 % top half matrix:
@@ -29,7 +29,12 @@ rank(A([1:8, 17:32], 9:16))
 rank(A(1:b,1:b))
 %%
 % now construct the HSS approximation: 
-H = hss(A,blocksize = 8,k = r);
+H = hss(A,blocksize = b,k = r);
+%% 
+% testing constructor on weird sizes
+spy(H)
+% thinking:
+% if (b+1) * #oflevels+1 > m then set b=b+1?
 %%
 % testing blockbuilder
 A12 = blockbuilder(H.A12,H);

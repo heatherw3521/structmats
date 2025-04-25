@@ -19,6 +19,7 @@ function H = hss_constructor(H,A,options)
     end
     
     blocksize = options.blocksize;
+    blocksize = ceil(size(A,1)/ceil(size(A,1)/blocksize))
     cutrule = options.cutrule;
     
     % determine how to approximate off-diagonal blocks

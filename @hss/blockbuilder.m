@@ -25,8 +25,12 @@ end
 
 function left = leftdrill(H)
 
-if H.A11.isleaf
+if H.A11.isleaf && H.A22.isleaf
     left = blkdiag(H.A12.Z, H.A21.Z);
+elseif H.A11.isleaf
+    left = blkdiag(eye(H.A11.size), leftdrill(H.A22)) * blkdiag(H.A12.Z, H.A21.Z);
+elseif H.A22.isleaf
+    left = blkdiag(leftdrill(H.A11), eye(H.A22.size)) * blkdiag(H.A12.Z, H.A21.Z);
 else
     left = blkdiag(leftdrill(H.A11), leftdrill(H.A22)) * blkdiag(H.A12.Z, H.A21.Z);
 end
