@@ -30,6 +30,35 @@ rank(A(1:b,1:b))
 %%
 % now construct the HSS approximation: 
 H = hss(A,blocksize = 8,k = r);
+%%
+% testing blockbuilder
+A12 = blockbuilder(H.A12,H);
+trueA12 = A(1:32,33:64);
+A12-trueA12
+%%
+% testing subsef
+% only in A11
+norm(H(5:14,3:7) - A(5:14,3:7))/norm(A(5:14,3:7))
+% only in A22
+norm(H(45:54,43:57) - A(45:54,43:57))/norm(A(45:54,43:57))
+% only in A21
+norm(H(45:54,2:10) - A(45:54,2:10))/norm(A(45:54,2:10))
+% only in A12
+norm(H(17:26,43:57) - A(17:26,43:57))/norm(A(17:26,43:57))
+
+% A11 and A12
+norm(H(17:26,23:57) - A(17:26,23:57))/norm(A(17:26,23:57))
+% A11 and A21
+norm(H(22:54,2:10) - A(22:54,2:10))/norm(A(22:54,2:10))
+% A12 and A22
+norm(H(13:54,43:57) - A(13:54,43:57))/norm(A(13:54,43:57))
+% A21 and A22
+norm(H(45:54,2:60) - A(45:54,2:60))/norm(A(45:54,2:60))
+
+% all 4
+norm(H(30:38,11:60) - A(30:38,11:60))/norm(A(30:38,11:60))
+
+
 %% test off diag leaves
 idxr = 1:b; 
 idxc = b+1:2*b; 
