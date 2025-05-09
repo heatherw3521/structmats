@@ -19,7 +19,16 @@ function H = hss_constructor(H,A,options)
     end
     
     blocksize = options.blocksize;
-    blocksize = ceil(size(A,1)/ceil(size(A,1)/blocksize))
+    b1 = ceil(size(A,1)/ceil(size(A,1)/blocksize));
+    b2 = ceil(size(A,2)/ceil(size(A,2)/blocksize));
+    blocksize = min(b1,b2);
+    if b1~=b2
+        size(A)
+        b1
+        b2
+        blocksize
+    end
+    blocksize
     cutrule = options.cutrule;
     
     % determine how to approximate off-diagonal blocks
@@ -222,8 +231,8 @@ function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = offdiagcons
             % compute decomp
             % TODO: This output is for ID
             % input = z*input(rows,:)
-            [z,rows] = decomp(A(H.Ir(1):H.Ir(2),indexsubtraction([1,size(A,2)],othercols)),ctype = cutofftype,cval = cutoffval, orientation = 'rows');
-            
+            %[z,rows] = decomp(A(H.Ir(1):H.Ir(2),indexsubtraction([1,size(A,2)],othercols)),ctype = cutofftype,cval = cutoffval, orientation = 'rows');
+            [z,rows] = decomp(A(H.Ir(1):H.Ir(2),[1:othercols(1)-1,othercols(2)+1:size(A,2)]),ctype = cutofftype,cval = cutoffval, orientation = 'rows');
             % store z
             H.Z = z;
             rowfactorDict({[H.level,H.rowtreeindex]}) = {z};
@@ -243,8 +252,8 @@ function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = offdiagcons
             disp('here cols')
         % otherwise we need to compute it
         else
-            [y,cols] = decomp(A(indexsubtraction([1,size(A,1)],otherrows),H.Ic(1):H.Ic(2)),ctype = cutofftype,cval = cutoffval, orientation = 'columns');
-    
+            %[y,cols] = decomp(A(indexsubtraction([1,size(A,1)],otherrows),H.Ic(1):H.Ic(2)),ctype = cutofftype,cval = cutoffval, orientation = 'columns');
+            [y,cols] = decomp(A([1:otherrows(1)-1,otherrows(2)+1:size(A,1)],H.Ic(1):H.Ic(2)),ctype = cutofftype,cval = cutoffval, orientation = 'columns');
             H.Y = y;
             colfactorDict({[H.level,H.coltreeindex]}) = {y};
     
@@ -257,13 +266,14 @@ function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = offdiagcons
     % not at the leaf level so we have preexisting decomps at a finer level 
     else
         % finding the children row decomps
+        1;
         rows1 = rowindexDict({[H.level+1,2*H.rowtreeindex-1]});
         rows2 = rowindexDict({[H.level+1,2*H.rowtreeindex]});
         
         % decomp on just the selected rows of A
         % TODO: this is specific to ID again :(
-        [z,rows] = decomp(A([rows1{1},rows2{1}],indexsubtraction([1,size(A,2)],othercols)),ctype = cutofftype,cval = cutoffval, orientation = 'rows');
-        
+       % [z,rows] = decomp(A([rows1{1},rows2{1}],indexsubtraction([1,size(A,2)],othercols)),ctype = cutofftype,cval = cutoffval, orientation = 'rows');
+        [z,rows] = decomp(A([rows1{1},rows2{1}],[1:othercols(1)-1,othercols(2)+1:size(A,2)]),ctype = cutofftype,cval = cutoffval, orientation = 'rows');
         % saving z
         H.Z = z;
         rowfactorDict({[H.level,H.rowtreeindex]}) = {z};
@@ -280,7 +290,8 @@ function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = offdiagcons
         cols2 = colindexDict({[H.level+1,2*H.coltreeindex]});
 
         % TODO: specific to ID
-        [y,cols] = decomp(A(indexsubtraction([1,size(A,1)],otherrows),[cols1{1},cols2{1}]),ctype = cutofftype,cval = cutoffval, orientation = 'columns');
+        %[y,cols] = decomp(A(indexsubtraction([1,size(A,1)],otherrows),[cols1{1},cols2{1}]),ctype = cutofftype,cval = cutoffval, orientation = 'columns');
+        [y,cols] = decomp(A([1:otherrows(1)-1,otherrows(2)+1:size(A,1)],[cols1{1},cols2{1}]),ctype = cutofftype,cval = cutoffval, orientation = 'columns');
 
         H.Y = y;
         colfactorDict({[H.level,H.coltreeindex]}) = {y};

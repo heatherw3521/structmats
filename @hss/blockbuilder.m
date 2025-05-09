@@ -8,6 +8,10 @@ if H.isleaf
     return
 end
 
+if H.isdiag
+    A = [blockbuilder(H.A11,H),blockbuilder(H.A12,H);blockbuilder(H.A21,H), blockbuilder(H.A22,H)];
+    return
+end
 
 if H.Ir == Hparent.A12.Ir
     left = leftdrill(Hparent.A11);
@@ -17,9 +21,7 @@ else
     right = rightdrill(Hparent.A11);
 end
 
-
 A = left * H.Z * H.lrcomponent * H.Y * right;
-
 
 end
 
@@ -27,10 +29,10 @@ function left = leftdrill(H)
 
 if H.A11.isleaf && H.A22.isleaf
     left = blkdiag(H.A12.Z, H.A21.Z);
-elseif H.A11.isleaf
-    left = blkdiag(eye(H.A11.size), leftdrill(H.A22)) * blkdiag(H.A12.Z, H.A21.Z);
-elseif H.A22.isleaf
-    left = blkdiag(leftdrill(H.A11), eye(H.A22.size)) * blkdiag(H.A12.Z, H.A21.Z);
+% elseif H.A11.isleaf
+%     left = blkdiag(eye(H.A11.size), leftdrill(H.A22)) * blkdiag(H.A12.Z, H.A21.Z);
+% elseif H.A22.isleaf
+%     left = blkdiag(leftdrill(H.A11), eye(H.A22.size)) * blkdiag(H.A12.Z, H.A21.Z);
 else
     left = blkdiag(leftdrill(H.A11), leftdrill(H.A22)) * blkdiag(H.A12.Z, H.A21.Z);
 end

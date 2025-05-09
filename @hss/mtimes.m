@@ -1,7 +1,7 @@
 function H = mtimes(H1,H2)
 
-if isa(H1,'myhss')
-    if isa(H2,'myhss')
+if isa(H1,'hss')
+    if isa(H2,'hss')
         error('hss matmat multiplication is not yet supported')
     elseif isscalar(H2)
         error('hss mat scalar multiplication is not yet supported')

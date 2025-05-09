@@ -4,7 +4,7 @@ function spy(H)
 m= H.size(1);
 n= H.size(2);
 
-cutoff = floor(log2(m/H.blocksize)/2);
+cutoff = floor(log2(m/H.blocksize)/2)+2;
 
 set(gca, 'YDir', 'reverse');
 
@@ -13,7 +13,9 @@ hold on
 draw_spy(H,[1,1,1],1,cutoff)
 xlim([H.Ir(1) H.Ir(2)])
 ylim([H.Ic(1) H.Ic(2)])
+%axis equal
 hold off
+
 
 end
 

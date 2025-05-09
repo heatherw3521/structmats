@@ -64,9 +64,9 @@ classdef hss
             H = hss_constructor(H, varargin{:});
         end
 
-        function y = mtimes(H1,H2)
-            y = hss_matvec(H1,H2);
-        end
+        % function y = mtimes(H1,H2)
+        %     y = hss_matvec(H1,H2);
+        % end
 
         function s = subsref(obj,ind)
             switch ind(1).type
