@@ -2,8 +2,8 @@
 clear all
 close all
 %%
-n = 2^13; 
-m = 2*n+12; 
+n = 2^12; 
+m = 2^12; 
 %m = n;
 tr = randn(n,1) + 1i*randn(n,1); 
 tc = randn(m,1); 
