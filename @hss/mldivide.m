@@ -10,7 +10,7 @@ if isa(H1,'hss')
         error('hss hss backsolver is not yet supported')
         %H = hss_mldivide(H1, H2);
     else
-        H = hss_vecsolve(H1,H2);
+        H = hss_ulvvecsolve(H1,H2);
     end
 else
     error('hss inverse is not yet supported')

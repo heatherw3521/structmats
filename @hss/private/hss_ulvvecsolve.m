@@ -1,6 +1,7 @@
-function x = hss_vecsolve(H,b)
+function x = hss_ulvvecsolve(H,b)
 % solves Hx = b for x with H an HSS matrix
 
+% at the leaf we dense solve
 if H.isleaf
     x = H.D\b;
     return
@@ -8,35 +9,35 @@ end
 
 HULV = H;
 
-[HULV,Qs,SsT,bnew,wbar,rows,cols] = down_recurse(HULV,b,zeros(H.size(2),1),{},{},{},{});
+[HULV,QsT,SsT,bnew,wbar,rows,cols] = down_recurse(HULV,b,zeros(H.size(2),1),{},{},{},{});
 
 bnewnew = bnew-HULV*wbar;
 bnewnewnew = bnewnew(~wbar);
 HULV = discard(HULV);
 HULVcopy = HULV;
 HULVcopy = levelup(HULVcopy,1,1);
-x1 = hss_vecsolve(HULVcopy,bnewnewnew);
+x1 = hss_ulvvecsolve(HULVcopy,bnewnewnew);
 wbar(~wbar) = x1;
 x = blkdiag(SsT{:})*wbar;
 
 
 end
 
-function [H, Qs, Ss, b, wbar, drows, srows] = down_recurse(H, b, wbar, Qs, Ss, drows, srows)
+function [H, QsT, SsT, b, wbar, drows, srows] = down_recurse(H, b, wbar, QsT, SsT, drows, srows)
 if H.A11.isleaf
     % compute requisite factors on the leaf level for the two off diag
     % leaves
-    [H,Qs,Ss, drows,srows] = leafcompression(H, Qs, Ss, drows, srows, 1);
-    [H,Qs,Ss, drows,srows] = leafcompression(H, Qs, Ss,drows, srows, 2);
+    [H,QsT,SsT, drows,srows] = leafcompression(H, QsT, SsT, drows, srows, 1);
+    [H,QsT,SsT, drows,srows] = leafcompression(H, QsT, SsT,drows, srows, 2);
     % use Q to update rhs (being careful in the order in which Q is stored)
-    b(1:H.A11.size(1)) = bupdate(cell2mat(Qs(end-1)),b(1:H.A11.size(1)));
-    b(H.A11.size(1)+1:end) = bupdate(cell2mat(Qs(end)),b(H.A11.size(1)+1:end));
+    b(1:H.A11.size(1)) = bupdate(cell2mat(QsT(end-1)),b(1:H.A11.size(1)));
+    b(H.A11.size(1)+1:end) = bupdate(cell2mat(QsT(end)),b(H.A11.size(1)+1:end));
     % use piece of dense block that has been diagonalized to direct solve
     wbar(1:H.A11.size(2)) = bsolve(H.A11.D, b(1:H.A11.size(1)), size(H.A12.Z, 2));
-    wbar(H.A22.size(2)+1:end) = bsolve(H.A22.D, b(H.A11.size(1)+1:end), size(H.A21.Z,2));
+    wbar(H.A11.size(2)+1:end) = bsolve(H.A22.D, b(H.A11.size(1)+1:end), size(H.A21.Z,2));
 else
-    [H.A11,Qs,Ss, b(1:H.A11.size(1)), wbar(1:H.A11.size(2)), drows,srows] = down_recurse(H.A11, b(1:H.A11.size(1)), wbar(1:H.A11.size(2)), Qs, Ss, drows, srows);
-    [H.A22,Qs,Ss, b(H.A11.size(1)+1:end), wbar(H.A11.size(2)+1:end), drows,srows] = down_recurse(H.A22, b(H.A11.size(1)+1:end), wbar(H.A11.size(2)+1:end), Qs, Ss, drows, srows);
+    [H.A11,QsT,SsT, b(1:H.A11.size(1)), wbar(1:H.A11.size(2)), drows,srows] = down_recurse(H.A11, b(1:H.A11.size(1)), wbar(1:H.A11.size(2)), QsT, SsT, drows, srows);
+    [H.A22,QsT,SsT, b(H.A11.size(1)+1:end), wbar(H.A11.size(2)+1:end), drows,srows] = down_recurse(H.A22, b(H.A11.size(1)+1:end), wbar(H.A11.size(2)+1:end), QsT, SsT, drows, srows);
 end
 end
 
@@ -104,7 +105,8 @@ else
 
     % update column
     Hparent.A12.Y = Hparent.A12.Y * S;
-    SsT = [SsT(1:end-1); S'; SsT(end)];
+    %SsT = [SsT(1:end-1); S'; SsT(end)];
+    SsT = [SsT; S'];
 end
 end
 
@@ -199,7 +201,6 @@ elseif mod(H.rowtreeindex,2) ==1
     Hparent.A12.Y = Hparent.A12.Y*blkdiag(Y1,Y2);
 
     Hparent.A12.size = [size(Hparent.A12.Z,1),size(Hparent.A12.Y,2)];
-    1;
 
 elseif mod(H.rowtreeindex,2) == 0
     % offdiag layer to be leaf layer
@@ -210,7 +211,6 @@ elseif mod(H.rowtreeindex,2) == 0
     Y1 = Hparent.A11.A21.Y;
     Y2 = Hparent.A11.A12.Y;
     Hparent.A21.Y = Hparent.A21.Y*blkdiag(Y1,Y2);
-    1;
 
     Hparent.A21.size = [size(Hparent.A21.Z,1),size(Hparent.A21.Y,2)];
 end

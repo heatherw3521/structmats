@@ -4,8 +4,8 @@
 clear all
 close all
 %%
-m = 40; 
-n = 40; 
+m = 47; 
+n = 47; 
 bl = 15; % blocksize
 r = 4; % rank
 % x = linspace(0,1,m);
@@ -44,8 +44,10 @@ for m = 82:200
 end
 %%
 % now construct the HSS approximation: 
-H = hss(A,blocksize = bl,k = r);
+H = hss(A,blocksize = bl);
 b = ones(m,1);
+global x
+x = A\b;
 %% 
 % testing constructor on weird sizes
 spy(H)
