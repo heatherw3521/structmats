@@ -12,8 +12,12 @@ HULV = H;
 [HULV,QsT,SsT,bnew,wbar,rows,cols] = down_recurse(HULV,b,zeros(H.size(2),1),{},{},{},{});
 
 bnewnew = bnew-HULV*wbar;
-bnewnewnew = bnewnew(~wbar);
+bnewnewnew = bnewnew(~wbar); % THIS LINE NEEDS TO BE READDRESSED BC I THINK ITS WRONG FOR RECT CASE
 HULV = discard(HULV);
+%Hdisc = discard(HULV);
+%b_reduced = bnewnew(Hdisc.Ir);
+%wbar_reduced = wbar(Hdisc.Ic);
+
 HULVcopy = HULV;
 HULVcopy = levelup(HULVcopy,1,1);
 x1 = hss_ulvvecsolve(HULVcopy,bnewnewnew);
@@ -24,12 +28,15 @@ x = blkdiag(SsT{:})*wbar;
 end
 
 function [H, QsT, SsT, b, wbar, drows, srows] = down_recurse(H, b, wbar, QsT, SsT, drows, srows)
+
 if H.A11.isleaf
     % compute requisite factors on the leaf level for the two off diag
     % leaves
     [H,QsT,SsT, drows,srows] = leafcompression(H, QsT, SsT, drows, srows, 1);
     [H,QsT,SsT, drows,srows] = leafcompression(H, QsT, SsT,drows, srows, 2);
     % use Q to update rhs (being careful in the order in which Q is stored)
+    disp([length(b), H.A11.size(1) + H.A22.size(1)])
+    disp([length(wbar), H.A11.size(2) + H.A22.size(2)])
     b(1:H.A11.size(1)) = bupdate(cell2mat(QsT(end-1)),b(1:H.A11.size(1)));
     b(H.A11.size(1)+1:end) = bupdate(cell2mat(QsT(end)),b(H.A11.size(1)+1:end));
     % use piece of dense block that has been diagonalized to direct solve
@@ -110,40 +117,129 @@ else
 end
 end
 
-function H = discard(H)
+% function H = discard(H)
+% if H.A11.isleaf
+%     m1 = H.A11.size(1);
+%     n1 = H.A11.size(2);
+%     m2 = H.A22.size(1);
+%     n2 = H.A22.size(2);
+%     k1 = size(H.A12.Z,2);
+%     k2 = size(H.A21.Z,2);
+%     % discard first l1-k rows
+%     % from off diag
+%     H.A12.Z = H.A12.Z(m1-k1+1:end,:);
+%     H.A12.Y = H.A12.Y(:,n2-k1+1:end);
+%     H.A12.size = [size(H.A12.Z,1), size(H.A12.Y,2)];
+%     % discard first l2-k columns
+%     % from off diag
+%     H.A21.Z = H.A21.Z(m2-k2+1:end,:);
+%     H.A21.Y = H.A21.Y(:,n1-k2+1:end);
+%     H.A21.size = [size(H.A21.Z,1), size(H.A21.Y,2)];
+% 
+% 
+%     % from diag
+%     bigm1 = max(m1,n1);
+%     bigm2 = max(m2,n2);
+%     H.A11.D = H.A11.D(bigm1-k1+1:end,bigm1-k2+1:end);
+%     H.A11.size = size(H.A11.D);
+%     H.A22.D = H.A22.D(bigm2-k2+1:end,bigm2-k1+1:end);
+%     H.A22.size = size(H.A22.D);
+% else
+%     H.A11 = discard(H.A11);
+%     %H.A11.size = size(H.A11.A11) + size(H.A11.A22);
+%     H.A22 = discard(H.A22);
+%     %H.A22.size = size(H.A22.A11) + size(H.A22.A22);
+% end
+% end
+
+function H = discard(H, Ir_global, Ic_global)
+% DISCARD - Trim the HSS hierarchy and keep track of global row/col indices.
+% 
+% Inputs:
+%   H           - HSS node
+%   Ir_global   - (optional) global row indices of this node
+%   Ic_global   - (optional) global column indices of this node
+%
+% Outputs:
+%   H           - Updated HSS node with:
+%                   .A11, .A12, .A21, .A22 trimmed
+%                   .Ir, .Ic fields listing *remaining* global row/col indices
+%
+% Usage:
+%   H = discard(H);
+%   Afterward, H.Ir and H.Ic can be used to know which global entries remain.
+
+if nargin < 2
+    % default: use full range if this is the top-level call
+    Ir_global = (1:H.size(1)).';
+    Ic_global = (1:H.size(2)).';
+end
+
 if H.A11.isleaf
+    % ---- sizes before trimming ----
+    m1 = H.A11.size(1); n1 = H.A11.size(2);
+    m2 = H.A22.size(1); n2 = H.A22.size(2);
+    k1 = size(H.A12.Z, 2);
+    k2 = size(H.A21.Z, 2);
+
+    % ---- child index partitions ----
+    Ir1 = Ir_global(1:m1);
+    Ir2 = Ir_global(m1+1:end);
+    Ic1 = Ic_global(1:n1);
+    Ic2 = Ic_global(n1+1:end);
+
+    % ---- trim off-diagonals ----
+    H.A12.Z = H.A12.Z(m1-k1+1:end, :);
+    H.A12.Y = H.A12.Y(:, n2-k1+1:end);
+    H.A12.size = [size(H.A12.Z,1), size(H.A12.Y,2)];
+
+    H.A21.Z = H.A21.Z(m2-k2+1:end, :);
+    H.A21.Y = H.A21.Y(:, n1-k2+1:end);
+    H.A21.size = [size(H.A21.Z,1), size(H.A21.Y,2)];
+
+    % ---- trim diagonals ----
+    bigm1 = max(m1, n1);
+    bigm2 = max(m2, n2);
+    H.A11.D = H.A11.D(bigm1-k1+1:end, bigm1-k2+1:end);
+    H.A11.size = size(H.A11.D);
+    H.A22.D = H.A22.D(bigm2-k2+1:end, bigm2-k1+1:end);
+    H.A22.size = size(H.A22.D);
+
+    % ---- build new row/col indices after trimming ----
+    kept_rows_A11 = Ir1(bigm1-k1+1:end);
+    kept_rows_A22 = Ir2(bigm2-k2+1:end);
+    kept_cols_A11 = Ic1(bigm1-k2+1:end);
+    kept_cols_A22 = Ic2(bigm2-k1+1:end);
+
+    % concatenate to form this node's kept indices
+    H.Ir = [kept_rows_A11; kept_rows_A22];
+    H.Ic = [kept_cols_A11; kept_cols_A22];
+
+else
+    % ---- recurse down the tree ----
     m1 = H.A11.size(1);
     n1 = H.A11.size(2);
-    m2 = H.A22.size(1);
-    n2 = H.A22.size(2);
-    k1 = size(H.A12.Z,2);
-    k2 = size(H.A21.Z,2);
-    % discard first l1-k rows
-    % from off diag
-    H.A12.Z = H.A12.Z(m1-k1+1:end,:);
-    H.A12.Y = H.A12.Y(:,n2-k1+1:end);
-    H.A12.size = [size(H.A12.Z,1), size(H.A12.Y,2)];
-    % discard first l2-k columns
-    % from off diag
-    H.A21.Z = H.A21.Z(m2-k2+1:end,:);
-    H.A21.Y = H.A21.Y(:,n1-k2+1:end);
-    H.A21.size = [size(H.A21.Z,1), size(H.A21.Y,2)];
-    
-    
-    % from diag
-    bigm1 = max(m1,n1);
-    bigm2 = max(m2,n2);
-    H.A11.D = H.A11.D(bigm1-k1+1:end,bigm1-k2+1:end);
-    H.A11.size = size(H.A11.D);
-    H.A22.D = H.A22.D(bigm2-k2+1:end,bigm2-k1+1:end);
-    H.A22.size = size(H.A22.D);
-else
-    H.A11 = discard(H.A11);
-    %H.A11.size = size(H.A11.A11) + size(H.A11.A22);
-    H.A22 = discard(H.A22);
-    %H.A22.size = size(H.A22.A11) + size(H.A22.A22);
+
+    Ir1 = Ir_global(1:m1);
+    Ir2 = Ir_global(m1+1:end);
+    Ic1 = Ic_global(1:n1);
+    Ic2 = Ic_global(n1+1:end);
+
+    % recursively discard with inherited index maps
+    H.A11 = discard(H.A11, Ir1, Ic1);
+    H.A22 = discard(H.A22, Ir2, Ic2);
+
+    % gather row/col index lists from children
+    H.Ir = [H.A11.Ir; H.A22.Ir];
+    H.Ic = [H.A11.Ic; H.A22.Ic];
 end
+
+% finally, update this node's reported size
+H.size = [length(H.Ir), length(H.Ic)];
+
 end
+
+
 
 function [H,rstart,cstart] = levelup(H,rstart,cstart)
 if H.A11.isleaf

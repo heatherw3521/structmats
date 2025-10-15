@@ -1,4 +1,5 @@
 function [Z,rows,varargout] = inter_decomp_tfile(A,options)
+
 % one sided interpolative decompositon of matrix A (mxn)
 % A = Z*A(rows,:) if rows
 % A = A(:,cols)*Z if columns

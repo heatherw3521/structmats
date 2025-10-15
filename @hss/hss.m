@@ -12,6 +12,7 @@ classdef hss
         Ir %row indices in H
         Ic %column indices in H
         blocksize %value below which to stop creating new blocks (not necessarily the exact leaf level blocksize)
+        levelcount %number of levels
             
         level % level in tree with 0 being the root
         rowtreeindex % row index relative to the level i am on
@@ -45,6 +46,7 @@ classdef hss
                 H.Ir = [];
                 H.Ic = [];
                 H.blocksize = [];
+                H.levelcount = [];
                 H.level = [];
                 H.rowtreeindex = [];
                 H.coltreeindex = [];

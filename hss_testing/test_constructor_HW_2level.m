@@ -4,9 +4,9 @@
 clear all
 close all
 %%
-m = 47; 
-n = 47; 
-bl = 15; % blocksize
+m = 2e2; 
+n = 2e2; 
+bl = 20; % blocksize
 r = 4; % rank
 % x = linspace(0,1,m);
 % y = x+0.01;

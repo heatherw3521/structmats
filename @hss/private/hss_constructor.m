@@ -19,16 +19,17 @@ function H = hss_constructor(H,A,options)
     end
     
     blocksize = options.blocksize;
-    b1 = ceil(size(A,1)/ceil(size(A,1)/blocksize));
-    b2 = ceil(size(A,2)/ceil(size(A,2)/blocksize));
-    blocksize = min(b1,b2);
-    if b1~=b2
-        size(A)
-        b1
-        b2
-        blocksize
-    end
-    blocksize
+    leafLevel = floor(log(max(size(A))/blocksize)/log(2)); % Amount of levels
+    % b1 = ceil(size(A,1)/ceil(size(A,1)/blocksize));
+    % b2 = ceil(size(A,2)/ceil(size(A,2)/blocksize));
+    % blocksize = min(b1,b2);
+    % if b1~=b2
+    %     size(A)
+    %     b1
+    %     b2
+    %     blocksize
+    % end
+    % blocksize
     cutrule = options.cutrule;
     
     % determine how to approximate off-diagonal blocks
@@ -41,7 +42,7 @@ function H = hss_constructor(H,A,options)
     end
     
     if options.decomp == 'ID'
-        decomp = @inter_decomp;
+        decomp = @inter_decompv2;
     elseif options.decomp == 'SVD'
         decomp = @svd_decomp;
     else
@@ -60,7 +61,8 @@ function H = hss_constructor(H,A,options)
     H.Ir = [1,H.size(1)];
     H.Ic = [1,H.size(2)];
     H.blocksize = blocksize; % this keeps track of blocksize at the top level for ease of access, do i need? TODO
-    
+    H.levelcount = leafLevel;
+
     % determine where the cuts take place for level 2
     rowcut = cutrule(H.size(1));
     colcut = cutrule(H.size(2));
@@ -82,25 +84,25 @@ function H = hss_constructor(H,A,options)
     % diag recursion
     [H.A11,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = recursivestep(A, H.level+1, lr, lc, ...
         2*H.rowtreeindex-1, 2*H.coltreeindex-1, ...
-        rowfactorDict,rowindexDict,colfactorDict,colindexDict,blocksize,cutofftype,cutoffval,rr,rc,cutrule,decomp);
+        rowfactorDict,rowindexDict,colfactorDict,colindexDict,leafLevel,cutofftype,cutoffval,rr,rc,cutrule,decomp);
     [H.A22,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = recursivestep(A, H.level+1, rr, rc, ...
         2*H.rowtreeindex, 2*H.coltreeindex, ...
-        rowfactorDict,rowindexDict,colfactorDict,colindexDict,blocksize,cutofftype,cutoffval,lr,lc,cutrule,decomp);
+        rowfactorDict,rowindexDict,colfactorDict,colindexDict,leafLevel,cutofftype,cutoffval,lr,lc,cutrule,decomp);
     
 
     % off-diag construction at the first level (the remaining are done
     % during the diag recursions)
     [H.A12,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = offdiagconstructor(A,H.level+1,lr, rc, ...
         2*H.rowtreeindex-1,2*H.coltreeindex, ...
-        rowfactorDict,rowindexDict,colfactorDict,colindexDict,blocksize,cutofftype,cutoffval,rr,lc,decomp);
+        rowfactorDict,rowindexDict,colfactorDict,colindexDict,leafLevel,cutofftype,cutoffval,rr,lc,decomp);
     H.A21 = offdiagconstructor(A,H.level+1,rr, lc, ...
         2*H.rowtreeindex,2*H.coltreeindex-1, ...
-        rowfactorDict,rowindexDict,colfactorDict,colindexDict,blocksize,cutofftype,cutoffval,lr,rc,decomp);
+        rowfactorDict,rowindexDict,colfactorDict,colindexDict,leafLevel,cutofftype,cutoffval,lr,rc,decomp);
 
 
 end
 
-function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = recursivestep(A,level,rows,cols,treerowindex,treecolindex,rowfactorDict,rowindexDict,colfactorDict,colindexDict,blocksize,cutofftype,cutoffval,otherrows,othercols,cutrule,decomp)
+function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = recursivestep(A,level,rows,cols,treerowindex,treecolindex,rowfactorDict,rowindexDict,colfactorDict,colindexDict,leafLevel,cutofftype,cutoffval,otherrows,othercols,cutrule,decomp)
     % inputs:
     % A (mxn array, full matrix)
     % level (integer, current level in recursion with 0 being the root
@@ -135,7 +137,8 @@ function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = recursivest
     H.isdiag = true;
 
     % if size is less than blocksize we are at a leaf node
-    if min(H.size)<=blocksize
+    %if min(H.size)<=blocksize
+    if H.level == leafLevel
         H.isleaf = true;
     else
         H.isleaf = false;
@@ -160,25 +163,25 @@ function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = recursivest
         % recurse into the diags
         [H.A11,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = recursivestep(A, H.level+1, lr, lc, ...
             2*H.rowtreeindex-1, 2*H.coltreeindex-1, ...
-            rowfactorDict,rowindexDict,colfactorDict,colindexDict,blocksize,cutofftype,cutoffval,rr,rc,cutrule,decomp);
+            rowfactorDict,rowindexDict,colfactorDict,colindexDict,leafLevel,cutofftype,cutoffval,rr,rc,cutrule,decomp);
         [H.A22,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = recursivestep(A, H.level+1, rr, rc, ...
             2*H.rowtreeindex, 2*H.coltreeindex, ...
-            rowfactorDict,rowindexDict,colfactorDict,colindexDict,blocksize,cutofftype,cutoffval,lr,lc,cutrule,decomp);
+            rowfactorDict,rowindexDict,colfactorDict,colindexDict,leafLevel,cutofftype,cutoffval,lr,lc,cutrule,decomp);
     
         % construct the offdiags
         [H.A12,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = offdiagconstructor(A,H.level+1,lr, rc, ...
             2*H.rowtreeindex-1,2*H.coltreeindex, ...
-            rowfactorDict,rowindexDict,colfactorDict,colindexDict,blocksize,cutofftype,cutoffval,rr,lc,decomp);
+            rowfactorDict,rowindexDict,colfactorDict,colindexDict,leafLevel,cutofftype,cutoffval,rr,lc,decomp);
         [H.A21,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = offdiagconstructor(A,H.level+1,rr, lc, ...
             2*H.rowtreeindex,2*H.coltreeindex-1, ...
-            rowfactorDict,rowindexDict,colfactorDict,colindexDict,blocksize,cutofftype,cutoffval,lr,rc,decomp);
+            rowfactorDict,rowindexDict,colfactorDict,colindexDict,leafLevel,cutofftype,cutoffval,lr,rc,decomp);
         
     end
 
 end
 
 
-function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = offdiagconstructor(A,level,rows,cols,treerowindex,treecolindex,rowfactorDict,rowindexDict,colfactorDict,colindexDict,blocksize,cutofftype,cutoffval,otherrows,othercols,decomp)
+function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = offdiagconstructor(A,level,rows,cols,treerowindex,treecolindex,rowfactorDict,rowindexDict,colfactorDict,colindexDict,leafLevel,cutofftype,cutoffval,otherrows,othercols,decomp)
     % inputs:
     % A (mxn array, full matrix)
     % level (integer, current level in recursion with 0 being the root
@@ -210,7 +213,8 @@ function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = offdiagcons
     H.coltreeindex = treecolindex;
     H.size = [H.Ir(2)-H.Ir(1)+1,H.Ic(2)-H.Ic(1)+1];
     H.isdiag = false;
-    if min(H.size)<=blocksize
+    %if min(H.size)<=blocksize
+    if H.level == leafLevel
         H.isleaf = true;
     else
         H.isleaf = false;
@@ -263,6 +267,7 @@ function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = offdiagcons
         end
         % TODO: THIS IS ONLY TRUE FOR ID
         H.lrcomponent = A(H.lowrankrows,H.lowrankcols);
+
     % not at the leaf level so we have preexisting decomps at a finer level 
     else
         % finding the children row decomps

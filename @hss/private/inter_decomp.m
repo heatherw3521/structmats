@@ -3,6 +3,8 @@ function [Z,rows,varargout] = inter_decomp(A,options)
 % A = Z*A(rows,:) if rows
 % A = A(:,cols)*Z if columns
 
+%[Z, rows, varargout] = inter_decompv2(A, options);
+
 arguments
     A;
     options.ctype = 'threshold';
@@ -38,7 +40,7 @@ if strcmp(side,'columns')
     R_k = R(1:k,1:k);
     cols = P(1:k);
     if k<4
-        disp(cond(R_k.' * R_k))
+        %disp(cond(R_k.' * R_k))
     end
     Z = (R_k.' * R_k)\(A(:,cols)'*A);
     rows = cols;
