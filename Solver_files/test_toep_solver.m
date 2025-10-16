@@ -13,7 +13,9 @@ T = full(toeplitz(tc, tr));
 xt = randn(n,1)+1i*randn(n,1);
 b = T*xt; 
 %%
+tt = tic;
 x = structsolv_toeplitz(tc,tr, b);
+time_solve = toc(tt)
 %x = Tm\b;
 %%
 norm(xt-x)/norm(xt)
