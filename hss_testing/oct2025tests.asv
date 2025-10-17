@@ -1,16 +1,18 @@
 %% Create A and set parameters
+supress all
+
 m = 40;
 n = 40;
 k = 2;
 blocksize = 10;
 
 X = linspace(0,1,n);
-Y = linspace(0,1,m).' + 0.001;
+Y = linspace(3,4,m).';
 C = 1 ./ (X-Y);
 A = C(1:m,1:n);
 function A = genA(m,n)
-    X = linspace(0,1,n);
-    Y = linspace(0,1,m).' + 0.001;
+    X = linspace(0,1,m) + 0.01;
+    Y = linspace(0,1,m).';
     C = 1 ./ (X-Y);
     A = C(1:m,1:n);
 end
@@ -112,32 +114,4 @@ x_ref = A \ b_true;
 compare_error = norm(x_hss - x_ref) / norm(x_ref);
 fprintf('Compare with dense solve: %.3e\n', compare_error);
 
-
-
-
-%% 
-% parameters
-m = 40;
-n = 40;
-k = 20;
-blocksize = 20;
-% create A
-A = genA(m,n);
-% create HSS structure for A and visualize
-H = hss(A,blocksize = blocksize, k = k); 
-spy(H)
-% xtrue and btrue
-%xtrue = randn(n,1);
-xtrue = zeros(n,1);
-xtrue(1) = 1;
-btrue = A*xtrue;
-
-% matvec error
-norm(A*xtrue - H*xtrue)
-
-% HSS ULV solve
-x = H\btrue;
-
-% error in solve
-norm(x-full(H)\btrue)
 

@@ -22,7 +22,7 @@ HULVcopy = HULV;
 HULVcopy = levelup(HULVcopy,1,1);
 x1 = hss_ulvvecsolve(HULVcopy,bnewnewnew);
 wbar(~wbar) = x1;
-x = (blkdiag(SsT{:}))'*wbar;
+x = blkdiag(SsT{:})*wbar;
 
 
 end
@@ -65,10 +65,8 @@ Fright = flip(eye(k)); % small anti diag of 1's for QL decomps
 [Q,R] = qr(H.Z*Fright);
 % Z = QRF = (QF)(FRF) -> (QF)'Z = FRF = newZ
 H.Z = Fleft*R*Fright;
-%Q = Q*Fleft;
-%Qs = [Qs; Q'];
-Q = Fleft*Q';
-Qs = [Qs; Q];
+Q = Q*Fleft;
+Qs = [Qs; Q'];
 
 % upper right or lower left leaf
 if mod(H.rowtreeindex,2) == 1
@@ -103,7 +101,7 @@ else
     Hparent.A22.D = Q' * Hparent.A22.D;
 
     D = Hparent.A22.D;
-    % l = size(D,1);
+    l = size(D,1);
     % make dense block lower triangular
     % D = [D1;D2]
     % want D*Z = [L'; stuff]
@@ -162,6 +160,94 @@ else
     %H.A22.size = size(H.A22.A11) + size(H.A22.A22);
 end
 end
+
+% function H = discard(H, Ir_global, Ic_global)
+% % DISCARD - Trim the HSS hierarchy and keep track of global row/col indices.
+% % 
+% % Inputs:
+% %   H           - HSS node
+% %   Ir_global   - (optional) global row indices of this node
+% %   Ic_global   - (optional) global column indices of this node
+% %
+% % Outputs:
+% %   H           - Updated HSS node with:
+% %                   .A11, .A12, .A21, .A22 trimmed
+% %                   .Ir, .Ic fields listing *remaining* global row/col indices
+% %
+% % Usage:
+% %   H = discard(H);
+% %   Afterward, H.Ir and H.Ic can be used to know which global entries remain.
+% 
+% if nargin < 2
+%     % default: use full range if this is the top-level call
+%     Ir_global = (1:H.size(1)).';
+%     Ic_global = (1:H.size(2)).';
+% end
+% 
+% if H.A11.isleaf
+%     % ---- sizes before trimming ----
+%     m1 = H.A11.size(1); n1 = H.A11.size(2);
+%     m2 = H.A22.size(1); n2 = H.A22.size(2);
+%     k1 = size(H.A12.Z, 2);
+%     k2 = size(H.A21.Z, 2);
+% 
+%     % ---- child index partitions ----
+%     Ir1 = Ir_global(1:m1);
+%     Ir2 = Ir_global(m1+1:end);
+%     Ic1 = Ic_global(1:n1);
+%     Ic2 = Ic_global(n1+1:end);
+% 
+%     % ---- trim off-diagonals ----
+%     H.A12.Z = H.A12.Z(m1-k1+1:end, :);
+%     H.A12.Y = H.A12.Y(:, n2-k1+1:end);
+%     H.A12.size = [size(H.A12.Z,1), size(H.A12.Y,2)];
+% 
+%     H.A21.Z = H.A21.Z(m2-k2+1:end, :);
+%     H.A21.Y = H.A21.Y(:, n1-k2+1:end);
+%     H.A21.size = [size(H.A21.Z,1), size(H.A21.Y,2)];
+% 
+%     % ---- trim diagonals ----
+%     bigm1 = max(m1, n1);
+%     bigm2 = max(m2, n2);
+%     H.A11.D = H.A11.D(bigm1-k1+1:end, bigm1-k2+1:end);
+%     H.A11.size = size(H.A11.D);
+%     H.A22.D = H.A22.D(bigm2-k2+1:end, bigm2-k1+1:end);
+%     H.A22.size = size(H.A22.D);
+% 
+%     % ---- build new row/col indices after trimming ----
+%     kept_rows_A11 = Ir1(bigm1-k1+1:end);
+%     kept_rows_A22 = Ir2(bigm2-k2+1:end);
+%     kept_cols_A11 = Ic1(bigm1-k2+1:end);
+%     kept_cols_A22 = Ic2(bigm2-k1+1:end);
+% 
+%     % concatenate to form this node's kept indices
+%     H.Ir = [kept_rows_A11; kept_rows_A22];
+%     H.Ic = [kept_cols_A11; kept_cols_A22];
+% 
+% else
+%     % ---- recurse down the tree ----
+%     m1 = H.A11.size(1);
+%     n1 = H.A11.size(2);
+% 
+%     Ir1 = Ir_global(1:m1);
+%     Ir2 = Ir_global(m1+1:end);
+%     Ic1 = Ic_global(1:n1);
+%     Ic2 = Ic_global(n1+1:end);
+% 
+%     % recursively discard with inherited index maps
+%     H.A11 = discard(H.A11, Ir1, Ic1);
+%     H.A22 = discard(H.A22, Ir2, Ic2);
+% 
+%     % gather row/col index lists from children
+%     H.Ir = [H.A11.Ir; H.A22.Ir];
+%     H.Ic = [H.A11.Ic; H.A22.Ic];
+% end
+% 
+% % finally, update this node's reported size
+% H.size = [length(H.Ir), length(H.Ic)];
+% 
+% end
+
 
 
 function [H,rstart,cstart] = levelup(H,rstart,cstart)
