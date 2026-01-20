@@ -6,7 +6,7 @@ function H = hss_constructor(H,A,options)
         A;
         options.blocksize = 200;
         options.cutrule = @(k) ceil(k/2);
-        options.threshold = 1e-12
+        options.tol = 1e-12
     
         % if instead of thresholding we wish to prescribe a certain k value
         options.k = 0
@@ -37,7 +37,7 @@ function H = hss_constructor(H,A,options)
         cutoffval = options.k;
         cutofftype = 'k';
     else
-        cutoffval = options.threshold;
+        cutoffval = options.tol;
         cutofftype = 'threshold';
     end
     
@@ -142,6 +142,7 @@ function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = recursivest
         H.isleaf = true;
     else
         H.isleaf = false;
+        H.levelcount = leafLevel;
         % determine the next split
         rowcut = cutrule(H.size(1));
         colcut = cutrule(H.size(2));
@@ -151,7 +152,7 @@ function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = recursivest
     if H.isleaf
         % store the dense diag block
         H.D = A(H.Ir(1):H.Ir(2),H.Ic(1):H.Ic(2));
-   
+        H.levelcount = leafLevel;
     % not on the diag? recursion time!!
     else
         % determine the indices for the next level down

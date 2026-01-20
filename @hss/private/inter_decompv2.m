@@ -51,6 +51,9 @@ if strcmp(side, 'columns')
         rows = [];
         return
     end
+    if k == min(size(A))
+        warning('Off-diagonal components might not be lowrank. Expect errors.')
+    end
 
     % Extract R11 and R12
     R11 = R(1:k, 1:k);

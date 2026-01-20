@@ -1,4 +1,4 @@
-function [H,H1] = mldivide(H1, H2)
+function [H, = mldivide(H1, H2)
 % backslash
 
 if isa(H1,'hss')

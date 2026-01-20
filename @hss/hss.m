@@ -32,6 +32,12 @@ classdef hss
         Y % column ID factor
         D % dense (empty if not a leaf and diagonal)
         lrcomponent % = A(lowrankrows,lowrankcols) (empty if on the diag)
+
+        Q % QR factor of offdiagonals
+        S % RQ factor of diagonals
+
+        minnormQ % QR for underdetermined system. Only stored at root level
+        nullorrange % is the minnormQ constructed to span nullspace(A) or range(A^T)
     end
     
      methods (Access = public, Static = false )
