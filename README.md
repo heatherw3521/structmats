@@ -1,4 +1,6 @@
 # structmats
+
+This is currently a sandbox--it is not fully functional----
 INSTRUCTIONS FOR SETTING UP PACKAGE WITH HM-TOOLBOX are in ```setup.m```
 
 Computing with Vandermonde, Toeplitz, Hankel and other matrices that have special displacement structures:
