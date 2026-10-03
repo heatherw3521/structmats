@@ -1,0 +1,37 @@
+function G = mp_hss_to_generators(H)
+%MP_HSS_TO_GENERATORS  Inverse of mp_hss_from_generators: read the generators
+%   (D, U/R, V/W, B12, B21, cluster boundaries) out of an @hss object built by
+%   hss() or mp_hss_from_generators().  Requires a uniform-depth tree (true for
+%   everything hss_constructor.m builds).
+L = H.levelcount;
+G.L = L;
+G.rb = cell(L+1,1); G.cb = cell(L+1,1);
+G.U = cell(L+1,1); G.V = cell(L+1,1);
+G.B12 = cell(L,1); G.B21 = cell(L,1);
+G.D = cell(2^L,1);
+for l = 0:L
+    G.rb{l+1} = zeros(1, 2^l+1); G.cb{l+1} = zeros(1, 2^l+1);
+    G.U{l+1} = cell(2^l,1); G.V{l+1} = cell(2^l,1);
+    if l < L, G.B12{l+1} = cell(2^l,1); G.B21{l+1} = cell(2^l,1); end
+end
+if L == 0
+    G.D{1} = H.D; G.rb{1} = [0 size(H, 1)]; G.cb{1} = [0 size(H, 2)];
+    return
+end
+G = walk(H, 0, 1, G);
+end
+
+function G = walk(N, l, i, G)
+G.rb{l+1}(i) = N.Ir(1)-1;  G.rb{l+1}(i+1) = N.Ir(2);
+G.cb{l+1}(i) = N.Ic(1)-1;  G.cb{l+1}(i+1) = N.Ic(2);
+if N.isleaf
+    G.D{i} = N.D;
+    return
+end
+G.B12{l+1}{i} = N.A12.lrcomponent;
+G.B21{l+1}{i} = N.A21.lrcomponent;
+G.U{l+2}{2*i-1} = N.A12.Z;   G.V{l+2}{2*i}   = N.A12.Y';
+G.U{l+2}{2*i}   = N.A21.Z;   G.V{l+2}{2*i-1} = N.A21.Y';
+G = walk(N.A11, l+1, 2*i-1, G);
+G = walk(N.A22, l+1, 2*i, G);
+end

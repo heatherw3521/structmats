@@ -2,12 +2,12 @@ function y = hss_matvec(H,v)
 % hss times vector multiplication
 % H: mxn hss matrix
 % v: nx1 vector
-vsize = size(v);
-% y = zeros(H.size(1),vsize(2));
-if vsize(2) >1
-    y = [hss_matvec(H,v(:,1)), hss_matvec(H,v(:,2:end))];
-    return
-end
+% vsize = size(v);
+% y = zeros(H.sz(1),vsize(2));
+% if vsize(2) >1
+%     y = [hss_matvec(H,v(:,1)), hss_matvec(H,v(:,2:end))];
+%     return
+% end
 if H.isleaf == false
     dict = dictionary();
     % starting from the bottom build dict up
@@ -31,8 +31,8 @@ function dict = ascend(H,v,dict)
 if H.A11.isleaf == false
     %dict = ascend(H.A11,v(H.A11.Ic(1)-H.Ic(1)+1:H.A11.Ic(2)-H.Ic(1)+1,1),dict);
     %dict = ascend(H.A22,v(H.A22.Ic(1)-H.Ic(1)+1:H.A22.Ic(2)-H.Ic(1)+1,1),dict);
-    dict = ascend(H.A11,v(1:H.A11.size(2),1),dict);
-    dict = ascend(H.A22,v(H.A11.size(2)+1:end,1),dict);
+    dict = ascend(H.A11,v(1:H.A11.sz(2),:),dict);
+    dict = ascend(H.A22,v(H.A11.sz(2)+1:end,:),dict);
     d1 = dict({[H.A11.A21.level,H.A11.A21.coltreeindex]});
     d2 = dict({[H.A11.A12.level,H.A11.A12.coltreeindex]});
     d3 = dict({[H.A22.A21.level,H.A22.A21.coltreeindex]});
@@ -43,8 +43,8 @@ if H.A11.isleaf == false
         return
     end
 else
-    dict({[H.A21.level,H.A21.coltreeindex]}) = {H.A21.Y*v(H.A21.Ic(1)-H.Ic(1)+1:H.A21.Ic(2)-H.Ic(1)+1,1)};
-    dict({[H.A12.level,H.A12.coltreeindex]}) = {H.A12.Y*v(H.A12.Ic(1)-H.Ic(1)+1:H.A12.Ic(2)-H.Ic(1)+1,1)};
+    dict({[H.A21.level,H.A21.coltreeindex]}) = {H.A21.Y*v(H.A21.Ic(1)-H.Ic(1)+1:H.A21.Ic(2)-H.Ic(1)+1,:)};
+    dict({[H.A12.level,H.A12.coltreeindex]}) = {H.A12.Y*v(H.A12.Ic(1)-H.Ic(1)+1:H.A12.Ic(2)-H.Ic(1)+1,:)};
 end
 
 
@@ -73,14 +73,14 @@ if H.isleaf == 0
         % updateto2 = H.A21.Z*(currd{1}(end/2+1:end) + H.A21.lrcomponent*d1{1});
         % updateto1 = H.A12.Z*(currd{1}(1:end/2) + H.A12.lrcomponent*d2{1});
 
-        updateto1 = H.A12.Z*(currd{1}(1:size(H.A12.Z,2))+H.A12.lrcomponent*d2{1});
-        updateto2 = H.A21.Z*(currd{1}(size(H.A12.Z,2)+1:end)+H.A21.lrcomponent*d1{1});
+        updateto1 = H.A12.Z*(currd{1}(1:size(H.A12.Z,2),:)+H.A12.lrcomponent*d2{1});
+        updateto2 = H.A21.Z*(currd{1}(size(H.A12.Z,2)+1:end,:)+H.A21.lrcomponent*d1{1});
 
         dict({[H.A21.level,H.A21.coltreeindex]}) = {updateto1};
         dict({[H.A12.level,H.A12.coltreeindex]}) = {updateto2};
     end
-    [y1,dict] = descend(H.A11,v(1:H.A11.size(2)),dict);
-    [y2,dict] = descend(H.A22,v(H.A11.size(2)+1:end),dict);
+    [y1,dict] = descend(H.A11,v(1:H.A11.sz(2),:),dict);
+    [y2,dict] = descend(H.A22,v(H.A11.sz(2)+1:end,:),dict);
     y = [y1;y2];
 else
     currd = dict({[H.level,H.rowtreeindex]});

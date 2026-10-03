@@ -1,8 +1,10 @@
 function H = mtimes(H1,H2)
+if isa(H1,'hss'), hss_assertroot(H1, 'H*X'); end
+if isa(H2,'hss'), hss_assertroot(H2, 'X*H'); end
 
 if isa(H1,'hss')
     if isa(H2,'hss')
-        error('hss matmat multiplication is not yet supported')
+        H = hss_matmat(H1,H2);
     elseif isscalar(H2)
         error('hss mat scalar multiplication is not yet supported')
     else

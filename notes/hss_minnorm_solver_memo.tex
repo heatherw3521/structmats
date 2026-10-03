@@ -1,0 +1,348 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage[margin=1in]{geometry}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{xcolor}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{claim}{Claim}
+\newtheorem{remark}{Remark}
+\newtheorem{assumption}{Assumption}
+
+\DeclareMathOperator{\Null}{Null}
+\DeclareMathOperator{\Range}{Range}
+
+\title{The Recursive Complete Minimum-Norm HSS Solver}
+\author{Arjun Sethi-Olowin}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+
+These notes provide the notation and the algorithm to understand a direct
+hierarchically semi-separable (HSS) ULV-based minimum norm solver.
+
+\section{Setup and Notation}
+
+We are considering $H\in\mathbb{C}^{m\times n}$ as a matrix that admits HSS
+structure, with $m<n$. We wish to solve
+\[
+x^* = \operatorname*{arg\,min}_{Hx=b}\|x\|_2 = H^*(HH^*)^{-1}b.
+\]
+At a generic sibling pair $\tau,\sigma\in\{1,2\}$ ($\tau\neq\sigma$), the diagonal
+and off-diagonal blocks are
+\[
+D_\tau\in\mathbb{C}^{n_\tau\times p_\tau},\quad p_\tau>n_\tau,\qquad
+U_\tau\in\mathbb{C}^{n_\tau\times k_\tau},\qquad
+V_\tau\in\mathbb{C}^{\ell_\tau\times p_\tau},
+\]
+\[
+H_{\tau\sigma} = U_\tau B_{\tau\sigma}V_\sigma^*,\qquad B_{\tau\sigma}\in\mathbb{C}^{k_\tau\times\ell_\sigma},
+\]
+with $k_\tau$ the rank of $\tau$'s own row generator and $\ell_\tau$ the rank of
+$\tau$'s own column generator.
+
+For the algorithm of Section~\ref{sec:algorithm} we require:
+\begin{assumption}
+\label{as:slack}
+Every leaf $\tau$ has enough slack for its sibling's coupling rank:
+$\ell_\tau + n_\tau \le p_\tau$.
+\end{assumption}
+This is a sizing condition, not a compression-quality one: the Size Reduction
+step (Section~\ref{subsec:sizereduction}) LQ-factors the $p_\tau'\times p_\tau$
+stack $[V_\tau;D_\tau]$, $p_\tau':=\ell_\tau+n_\tau$, and an LQ factorization can
+only produce a full $p_\tau'\times p_\tau'$ unitary factor -- as opposed to a
+truncated one that would silently lose information -- when $p_\tau'\le p_\tau$.
+Assumption~\ref{as:slack} is exactly this condition.
+
+\section{The Recursive Minimum-Norm Solver}
+\label{sec:algorithm}
+
+At a leaf-sibling pair $\tau,\sigma$, two transformations reduce $Hx=b$ to a
+smaller system of the same form: Size Reduction, which uses the joint
+structure of $V_\tau$ and $D_\tau$ to shrink the column count of each leaf, and
+Decoupling, which uses two further unitary transforms per leaf to split off a
+forced, uniquely-determined block of $x$ from a remaining, still-coupled
+block. Once every leaf pair in the tree has been processed this way, what
+remains is again exactly an HSS system, one level shallower, on which the same
+procedure recurses; the recursion terminates once the tree has collapsed to a
+single dense leaf, solved directly by the usual normal-equations formula.
+
+\subsection{Size Reduction}
+\label{subsec:sizereduction}
+
+For each leaf $\tau$, LQ-factor the stacked matrix
+\[
+\begin{bmatrix}V_\tau\\ D_\tau\end{bmatrix}
+=
+\begin{bmatrix}\tilde V_\tau & 0\\ \tilde D_\tau & 0\end{bmatrix}\Omega_\tau^*,
+\qquad
+\tilde V_\tau\in\mathbb{C}^{\ell_\tau\times p_\tau'},\quad
+\tilde D_\tau\in\mathbb{C}^{n_\tau\times p_\tau'},\quad
+p_\tau' := \ell_\tau+n_\tau,
+\]
+with $\Omega_\tau\in\mathbb{C}^{p_\tau\times p_\tau}$ unitary. $V_\tau$ and $D_\tau$
+share the same discarded right null-space directions by construction, since
+they are LQ-factored \emph{jointly} -- this is what makes
+Remark~\ref{rem:sizereduction} below go through.
+
+Discarding the zero columns gives the size-reduced pair
+\[
+\tilde H =
+\begin{bmatrix}
+\tilde D_1 & U_1B_{12}\tilde V_2^*\\
+U_2B_{21}\tilde V_1^* & \tilde D_2
+\end{bmatrix}.
+\]
+
+\begin{remark}
+\label{rem:sizereduction}
+If $\tilde x$ solves $\tilde Hx=b$ with minimum norm, then
+$x^*=\Omega\begin{bmatrix}\tilde x\\0\end{bmatrix}$, $\Omega=\operatorname{diag}(\Omega_1,\Omega_2)$,
+is the minimum-norm solution of $Hx=b$. (Proved as Lemma~\ref{lem:orthogonal} below.)
+\end{remark}
+
+\subsection{Decoupling}
+\label{subsec:decoupling}
+
+\paragraph{Step 1: QL of $U_\tau$.}
+\[
+U_\tau = P_\tau\begin{bmatrix}0\\ \hat U_\tau\end{bmatrix},\qquad
+P_\tau\in\mathbb{C}^{n_\tau\times n_\tau}\text{ unitary},\quad
+\hat U_\tau\in\mathbb{C}^{k_\tau\times k_\tau}\text{ lower triangular}.
+\]
+Apply $P_\tau^*$ on the left to $\tilde D_\tau$ (and to $\tau$'s rows of $b$):
+$\tilde D_\tau\leftarrow P_\tau^*\tilde D_\tau$. This zeros the top $t_\tau:=n_\tau-k_\tau$
+rows of $U_\tau$, densifying $\tilde D_\tau$.
+
+\paragraph{Step 2: LQ of the top rows of $P_\tau^*\tilde D_\tau$.}
+Partition $P_\tau^*\tilde D_\tau=\begin{bmatrix}\tilde D_{\tau;11} & \tilde D_{\tau;12}\\ \tilde D_{\tau;21}&\tilde D_{\tau;22}\end{bmatrix}$,
+top block $t_\tau$ rows. LQ-factor the top block row:
+\[
+\begin{bmatrix}\tilde D_{\tau;11}&\tilde D_{\tau;12}\end{bmatrix}
+=\begin{bmatrix}\hat D_{\tau;11}&0\end{bmatrix}Q_\tau^*,
+\qquad
+Q_\tau\in\mathbb{C}^{p_\tau'\times p_\tau'}\text{ unitary},\quad
+\hat D_{\tau;11}\in\mathbb{C}^{t_\tau\times t_\tau}\text{ lower triangular}.
+\]
+Apply $Q_\tau^*$ on the right to the rest of $\tilde D_\tau$ and to $\tau$'s own
+$\tilde V_\tau^*$ (they occupy the same reduced column space):
+$\tilde D_\tau\leftarrow \tilde D_\tau Q_\tau^*$, $\tilde V_\tau^*\leftarrow \tilde V_\tau^*Q_\tau^*$.
+
+\paragraph{Result.}
+After forming $\hat H=P^*\tilde HQ^*$, $\hat b=P^*b$, the top $t_\tau$ rows of
+leaf $\tau$'s block row read $\begin{bmatrix}\hat D_{\tau;11}&0&0&0\end{bmatrix}$
+-- decoupled from the other leaf's columns. The bottom $k_\tau$ rows (over the
+remaining $\ell_\tau+k_\tau$ unknowns) remain dense and coupled.
+
+\subsection{Forced Solve and the Reduced System}
+\label{subsec:forcedsolve}
+
+Write $\hat x_\tau=\begin{bmatrix}X_\tau^{(1)}\\X_\tau^{(2)}\end{bmatrix}$,
+$X_\tau^{(1)}\in\mathbb{C}^{t_\tau}$ decoupled, $X_\tau^{(2)}\in\mathbb{C}^{\ell_\tau+k_\tau}$ still coupled.
+The decoupled top rows give
+\[
+\hat D_{\tau;11}X_\tau^{(1)} = \hat b_{\tau;1},
+\]
+solved directly by forward/back substitution -- unique, no freedom.
+
+Substituting $X_\tau^{(1)}$ into the bottom rows gives the reduced system
+\[
+\underbrace{\begin{bmatrix}
+\hat D_{1;22} & \hat U_1B_{12}\hat V_2^*\\
+\hat U_2B_{21}\hat V_1^* & \hat D_{2;22}
+\end{bmatrix}}_{=:\bar H}
+\begin{bmatrix}X_1^{(2)}\\X_2^{(2)}\end{bmatrix}
+=
+\underbrace{\begin{bmatrix}\hat b_{1;2}-\hat D_{1;21}X_1^{(1)}\\ \hat b_{2;2}-\hat D_{2;21}X_2^{(1)}\end{bmatrix}}_{=:\bar b}.
+\]
+
+\begin{remark}
+$\bar H$ is again exactly HSS: $\hat D_{\tau;22}$ is (in general) still wide,
+and the off-diagonal blocks retain the $U\cdot B\cdot V^*$ form untouched by
+this step's transforms. Across a full tree level, all sibling pairs reduce
+simultaneously to blocks that assemble into a single HSS matrix with one less
+level.
+\end{remark}
+
+\subsection{Reconstruction}
+\label{subsec:reconstruction}
+
+Given $\bar x=\begin{bmatrix}X_1^{(2)}\\X_2^{(2)}\end{bmatrix}$ from the
+recursive call,
+\[
+\hat x_\tau = \begin{bmatrix}X_\tau^{(1)}\\X_\tau^{(2)}\end{bmatrix},\qquad
+\tilde x_\tau = Q_\tau^*\hat x_\tau,\qquad
+x_\tau = \Omega_\tau\begin{bmatrix}\tilde x_\tau\\0\end{bmatrix}.
+\]
+
+\begin{remark}
+Depending on which LQ/QL convention an implementation's helper routines use
+($A=LQ$ vs.\ $A=QL$, and which side $Q$ is applied from), the collected factors
+may need to be applied transposed relative to the equations above -- check
+against whatever convention is actually in force before trusting the signs.
+\end{remark}
+
+\section{Proof of Optimality}
+
+\subsection{Two invariance lemmas}
+
+\begin{lemma}[Right unitary substitution]
+\label{lem:orthogonal}
+Let $\Omega$ be unitary and suppose $A\Omega=[\tilde A,0]$ (i.e.\ the last
+columns of $A\Omega$ vanish). If $\tilde x^*$ is the minimum-norm solution of
+$\tilde A\tilde x=b$, then $x^*=\Omega\begin{bmatrix}\tilde x^*\\0\end{bmatrix}$ is
+the minimum-norm solution of $Ax=b$.
+\end{lemma}
+\begin{proof}
+Since $A\Omega=[\tilde A,0]$, for any $\tilde x,w$,
+\[
+A\Omega\begin{bmatrix}\tilde x\\w\end{bmatrix} = [\tilde A,0]\begin{bmatrix}\tilde x\\w\end{bmatrix} = \tilde A\tilde x,
+\]
+independent of $w$. So if $\tilde A\tilde x=b$, then $x:=\Omega\begin{bmatrix}\tilde x\\w\end{bmatrix}$
+satisfies $Ax=b$ for \emph{every} choice of $w$. Conversely, since $\Omega$ is
+unitary (hence invertible), every $x$ can be written this way: set
+$\begin{bmatrix}\tilde x\\w\end{bmatrix}:=\Omega^*x$. So the feasible set of
+$Ax=b$ is exactly
+\[
+\left\{\Omega\begin{bmatrix}\tilde x\\w\end{bmatrix} \;:\; \tilde A\tilde x=b,\ w\text{ arbitrary}\right\}.
+\]
+
+Because $\Omega$ is unitary, $\|x\|_2=\left\|\Omega\begin{bmatrix}\tilde x\\w\end{bmatrix}\right\|_2
+=\sqrt{\|\tilde x\|_2^2+\|w\|_2^2}$. For any fixed feasible $\tilde x$, this is
+minimized over the free variable $w$ by $w=0$, giving $\|x\|_2=\|\tilde x\|_2$.
+Minimizing what remains over feasible $\tilde x$ (i.e.\ over $\tilde A\tilde x=b$)
+is exactly the definition of $\tilde x^*$. Hence the minimum-norm $x$ is
+$x^*=\Omega\begin{bmatrix}\tilde x^*\\0\end{bmatrix}$.
+\end{proof}
+
+\begin{lemma}[Two-sided unitary substitution]
+\label{lem:twosided}
+Let $P,Q$ be unitary and $\hat A=P^*AQ^*$, $\hat b=P^*b$. If $\hat x^*$ is the
+minimum-norm solution of $\hat A\hat x=\hat b$, then $x^*=Q^*\hat x^*$ is the
+minimum-norm solution of $Ax=b$.
+\end{lemma}
+\begin{proof}
+Since $\hat A=P^*AQ^*$ and $P$ is unitary, $AQ^*=P\hat A$. So for any $\hat x$,
+setting $x:=Q^*\hat x$ gives
+\[
+Ax = AQ^*\hat x = P\hat A\hat x.
+\]
+If $\hat A\hat x=\hat b$, then $Ax=P\hat b=PP^*b=b$ (using $\hat b=P^*b$ and $P$
+unitary), so $x:=Q^*\hat x$ is feasible for $Ax=b$. Conversely, since $Q$ is
+unitary (hence invertible), every $x$ can be written this way: set
+$\hat x:=Qx$, and then $Ax=b\iff P^*Ax=P^*b\iff P^*AQ^*\hat x=\hat b\iff \hat A\hat x=\hat b$.
+So $\hat x\mapsto x=Q^*\hat x$ is a bijection between the feasible sets of
+$\hat A\hat x=\hat b$ and $Ax=b$.
+
+Because $Q$ is unitary, $\|x\|_2=\|Q^*\hat x\|_2=\|\hat x\|_2$ for every $\hat x$.
+So minimizing $\|x\|_2$ over $Ax=b$ is the same problem, under this
+norm-preserving bijection, as minimizing $\|\hat x\|_2$ over $\hat A\hat x=\hat b$,
+and the minimizers correspond: $x^*=Q^*\hat x^*$.
+\end{proof}
+
+\subsection{One-level case}
+
+\begin{theorem}
+\label{thm:onelevel}
+Under Assumption~\ref{as:slack} and $\hat D_{\tau;11}$ nonsingular for $\tau=1,2$,
+the vector $x$ produced by the construction of Section~\ref{sec:algorithm} with
+$\bar x$ taken as the minimum-norm solution of $\bar H\bar x=\bar b$ is the
+minimum-norm solution of $Hx=b$.
+\end{theorem}
+\begin{proof}
+By Lemma~\ref{lem:orthogonal} (Size Reduction, Section~\ref{subsec:sizereduction},
+applied once per leaf, jointly on $V_\tau,D_\tau$), the minimum-norm solution of
+$Hx=b$ is $\Omega[\tilde x^*;0]$ where $\tilde x^*$ minimizes $\|\tilde x\|_2$
+over $\tilde H\tilde x=b$. By Lemma~\ref{lem:twosided} (Decoupling,
+Section~\ref{subsec:decoupling}), the minimum-norm solution of
+$\tilde H\tilde x=b$ is $Q^*\hat x^*$ where $\hat x^*$ minimizes $\|\hat x\|_2$
+over $\hat H\hat x=\hat b$.
+
+It remains to identify $\hat x^*$. Every feasible $\hat x$ (not just the
+minimum-norm one) satisfies $\hat D_{\tau;11}X_\tau^{(1)}=\hat b_{\tau;1}$
+exactly, and $\hat D_{\tau;11}$ is square and nonsingular, so $X_\tau^{(1)}$ is
+the \emph{same} for every feasible point. Hence
+\[
+\|\hat x\|_2^2 = \|X_1^{(1)}\|_2^2+\|X_2^{(1)}\|_2^2+\|X_1^{(2)}\|_2^2+\|X_2^{(2)}\|_2^2
+\]
+is minimized over the feasible set exactly by minimizing the free part
+$\|X_1^{(2)}\|_2^2+\|X_2^{(2)}\|_2^2$ subject to $\bar H\bar x=\bar b$ (the
+constraint remaining once $X_\tau^{(1)}$ is fixed and moved to the right-hand
+side) -- i.e.\ $\bar x^*=(X_1^{(2)*},X_2^{(2)*})$ is exactly the minimum-norm
+solution of $\bar H\bar x=\bar b$. Composing the three substitutions gives the
+claimed $x$.
+\end{proof}
+
+\subsection{General recursive case}
+
+\begin{theorem}
+\label{thm:general}
+For an $L$-level HSS matrix satisfying Assumption~\ref{as:slack} at every leaf
+pair encountered, with every $\hat D_{\tau;11}$ nonsingular, the recursive
+algorithm of Section~\ref{sec:algorithm} returns the minimum-norm solution of
+$Hx=b$.
+\end{theorem}
+\begin{proof}
+Induction on $L$. Base case $L=0$ ($H$ a single dense leaf): the algorithm
+returns $H^*(HH^*)^{-1}b$, which is exactly the minimum-norm solution.
+
+Inductive step: assume the recursive call on the $(L-1)$-level reduced matrix
+$\bar H$ returns its minimum-norm solution $\bar x^*$. The argument of
+Theorem~\ref{thm:onelevel} did not use $L=1$ anywhere except in asserting that
+$\bar x^*$ is the minimum-norm solution of $\bar H\bar x=\bar b$; replacing
+that assertion with the inductive hypothesis, the same proof goes through
+verbatim and shows the reconstructed $x$ is the minimum-norm solution of
+$Hx=b$.
+\end{proof}
+
+\begin{remark}
+The two-level case is the first instance where this induction is doing real
+work: the one-level reduced system is small enough to solve directly, but at
+two levels $\bar H$ is itself a genuine one-level HSS matrix, and
+Theorem~\ref{thm:onelevel} applied to it is what Theorem~\ref{thm:general}
+needs at the base of the induction proper.
+\end{remark}
+
+\section{Open Items}
+
+\begin{itemize}
+\item Assumption~\ref{as:slack} and the nonsingularity of $\hat D_{\tau;11}$ --
+  when do these actually hold for an HSS matrix arising from a genuine
+  approximation (as opposed to being assumed outright)?
+\item Complexity analysis: flop count per level, and the total over $L$ levels.
+\item What happens when Assumption~\ref{as:slack} fails at some leaf pair --
+  does the proof need anything beyond ``it's now a shallower instance of the
+  same problem'' once that pair is densified away?
+\end{itemize}
+
+% Algorithm pseudocode, kept separate from the step-by-step write-up above so
+% it can be cut entirely if Section~\ref{sec:algorithm} reads clearly without it.
+\section{Algorithm Summary}
+
+\begin{algorithm}[h]
+\caption{Recursive Complete Minimum-Norm HSS Solve}
+\label{alg:minnorm}
+\begin{algorithmic}[1]
+\Require HSS matrix $H\in\mathbb{C}^{m\times n}$, $m\le n$, full row rank; $b\in\mathbb{C}^m$
+\If{$H$ is a single dense leaf}
+  \State \Return $x = H^*(HH^*)^{-1}b$ \Comment{via \texttt{pinv}/\texttt{backslash}}
+\Else
+  \State At every leaf-sibling pair $(\tau,\sigma)$ in the tree, simultaneously:
+  \State \quad Size Reduction: $\Omega_\tau$ (\S\ref{subsec:sizereduction})
+  \State \quad Decoupling: $P_\tau,\,Q_\tau$ (\S\ref{subsec:decoupling})
+  \State \quad Forced solve for $X_\tau^{(1)}$ (\S\ref{subsec:forcedsolve})
+  \State Assemble the remaining free blocks $\{X_\tau^{(2)}\}$ into a reduced HSS
+         matrix $\bar H$ one level shallower, with reduced right-hand side $\bar b$
+  \State $\bar x \gets$ \textsc{RecursiveMinNormSolve}$(\bar H,\bar b)$ \Comment{recurse}
+  \State Reconstruct $x$ from $\bar x$ and $\{\Omega_\tau,P_\tau,Q_\tau\}$ (\S\ref{subsec:reconstruction})
+  \State \Return $x$
+\EndIf
+\end{algorithmic}
+\end{algorithm}
+
+\end{document}

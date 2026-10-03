@@ -1,0 +1,273 @@
+% ======================================================================
+\section{Setup and Notation}
+\label{sec:setup}
+
+We consider a matrix $H\in\mathbb{C}^{m\times n}$, $m\le n$, of full row rank, given in HSS form, and want
+\[
+x^\star=\operatorname*{arg\,min}_{Hx=b}\|x\|_2 = H^*(HH^*)^{-1}b = H^+ b .
+\]
+For $m=n$ this is the solution $H^{-1}b$; the algorithm covers both cases.
+
+\paragraph{Tree and generators.}
+$\mathcal T$ is a perfect binary tree of depth $L$. Node $\tau$ owns a row index set
+$I_\tau$ and a column index set $J_\tau$, and the children of a node partition its index
+sets. For a \emph{leaf} $\tau$,
+\[
+D_\tau = H(I_\tau,J_\tau)\in\mathbb{C}^{n_\tau\times p_\tau},\qquad
+U_\tau\in\mathbb{C}^{n_\tau\times k_\tau},\qquad
+V_\tau\in\mathbb{C}^{p_\tau\times \ell_\tau}:
+\]
+a leaf has $n_\tau$ rows and $p_\tau$ columns, $k_\tau$ is the rank of its row basis and $\ell_\tau$
+the rank of its column basis. (So $n_\tau$ counts the \emph{rows} of a leaf, while $n$ counts the
+\emph{columns} of $H$.) A non-leaf, non-root node $\pi$ with children $\alpha,\beta$ stores translation
+matrices $R_\pi\in\mathbb{C}^{(k_\alpha+k_\beta)\times k_\pi}$ and
+$W_\pi\in\mathbb{C}^{(\ell_\alpha+\ell_\beta)\times\ell_\pi}$, and the nested bases are
+\[
+\mathbf U_\tau = U_\tau,\ \mathbf V_\tau=V_\tau\ (\tau\text{ a leaf}),\qquad
+\mathbf U_\pi=\begin{bmatrix}\mathbf U_\alpha&\\&\mathbf U_\beta\end{bmatrix}R_\pi,\qquad
+\mathbf V_\pi=\begin{bmatrix}\mathbf V_\alpha&\\&\mathbf V_\beta\end{bmatrix}W_\pi .
+\]
+For siblings $\alpha,\beta$ (children of the same node),
+\begin{equation}\label{eq:offdiag}
+H(I_\alpha,J_\beta)=\mathbf U_\alpha B_{\alpha\beta}\mathbf V_\beta^*,\qquad B_{\alpha\beta}\in\mathbb{C}^{k_\alpha\times\ell_\beta}.
+\end{equation}
+Unrolling the nested bases, the part of leaf $\tau$'s block row outside its diagonal block is
+$H(I_\tau,J\setminus J_\tau)=U_\tau G_\tau$, and the part of its block column outside the diagonal
+block is $H(I\setminus I_\tau,J_\tau)=F_\tau V_\tau^*$, for some matrices $G_\tau,F_\tau$. Consequently,
+a unitary transformation of the rows of leaf $\tau$ acts on its whole block row through $U_\tau$
+and $D_\tau$ alone, and a unitary transformation of its columns acts on its whole block column
+through $V_\tau$ and $D_\tau$ alone. This is what makes the leaf-local operations below global.
+
+\paragraph{Proper representation.} We assume that no basis is wider than the block it spans:
+$k_\tau\le n_\tau$ for every leaf, and $k_\pi\le k_\alpha+k_\beta$ for every non-leaf $\pi$ with children
+$\alpha,\beta$. This is a property of the representation, not of $H$: any representation can be
+brought to this form without changing $H$ (replace a wide basis by an orthonormal basis of its
+range and absorb the remaining factor into the parent's translation and into $B$), and
+nested-basis constructions produce it directly. The algorithm uses it only so that the number of
+decoupled rows $t_\tau=n_\tau-k_\tau$ in Section~\ref{subsec:decoupling} is nonnegative.
+
+\paragraph{Right compressions and QL factorizations.} For $M\in\mathbb{C}^{a\times p}$, $a\le p$, a
+\emph{right compression} is a unitary $Q\in\mathbb{C}^{p\times p}$ with $MQ=[L,\;0]$,
+$L\in\mathbb{C}^{a\times a}$ lower triangular; it comes from a QR factorization
+$M^*=Q\begin{bmatrix}R\\0\end{bmatrix}$, $L=R^*$. A \emph{QL factorization} of a tall
+$U\in\mathbb{C}^{n\times k}$ ($k\le n$) is $U=P\begin{bmatrix}0\\ \hat U\end{bmatrix}$ with $P$ unitary
+and $\hat U\in\mathbb{C}^{k\times k}$ lower triangular.
+
+% ======================================================================
+\section{One Level of the Algorithm}
+\label{sec:algorithm}
+
+The algorithm is a minimum-norm variant of the ULV elimination of~\cite{cgp}. One level processes
+every leaf $\tau$ independently and then forms a reduced HSS system with one level fewer, which is
+solved recursively. We list the operations for a leaf $\tau$ with parent $\pi$ and sibling $\sigma$.
+
+\subsection{Size reduction}\label{subsec:sizereduction}
+If $\ell_\tau+n_\tau<p_\tau$, compute a unitary $\Omega_\tau$ (from a QR factorization of the
+$p_\tau\times(\ell_\tau+n_\tau)$ matrix $[V_\tau,\ D_\tau^*]$) with
+\begin{equation}\label{eq:sizered}
+\begin{bmatrix}V_\tau^*\\ D_\tau\end{bmatrix}\Omega_\tau=
+\begin{bmatrix}\tilde V_\tau^* & 0\\ \tilde D_\tau & 0\end{bmatrix},\qquad
+\tilde V_\tau^*\in\mathbb{C}^{\ell_\tau\times p_\tau'},\quad \tilde D_\tau\in\mathbb{C}^{n_\tau\times p_\tau'},
+\end{equation}
+where $p'_\tau=\ell_\tau+n_\tau$. Otherwise there is nothing to remove: $\Omega_\tau=I$ and
+$p'_\tau=p_\tau$. In both cases $p'_\tau=\min(p_\tau,\ell_\tau+n_\tau)$. Every row of $H(:,J_\tau)$ is a
+combination of the rows of $[V_\tau^*;D_\tau]$ (Section~\ref{sec:setup}), so the last $p_\tau-p'_\tau$
+columns of $H(:,J_\tau)\Omega_\tau$ vanish in every block row. Dropping them gives $\tilde H$: the same
+tree and generators, except $D_\tau\to\tilde D_\tau$ and $V_\tau\to\tilde V_\tau$.
+
+\begin{assumption}[slack]\label{as:slack}
+Every leaf satisfies $\ell_\tau+n_\tau\le p_\tau$.
+\end{assumption}
+\noindent Under Assumption~\ref{as:slack} the size reduction removes $p_\tau-\ell_\tau-n_\tau\ge0$ columns from
+every leaf and leaves exactly $p'_\tau=\ell_\tau+n_\tau$, so all block sizes are known in advance; a
+formulation with this fixed width needs the assumption. The algorithm itself does not, for two
+reasons.
+\begin{enumerate}[leftmargin=1.5em,itemsep=1pt]
+\item The size reduction only discards columns along which $H$ vanishes identically. When
+$\ell_\tau+n_\tau\ge p_\tau$ there may be none, and $\Omega_\tau=I$. Lemma~\ref{lem:orthogonal} below, which
+justifies the step, holds with an empty set of discarded columns.
+\item After the size reduction, the sizes enter at exactly one point: the forced block $L_\tau$ of
+Section~\ref{subsec:decoupling} must be square, which requires $t_\tau\le p'_\tau$. This follows from
+full row rank alone (Lemma~\ref{lem:rank}): the $t_\tau$ decoupled rows of leaf $\tau$ are nonzero only
+in $\tau$'s $p'_\tau$ columns, and the rows of a full-row-rank matrix are linearly independent.
+\end{enumerate}
+Without the assumption, a reduced leaf has $f_\tau=p'_\tau-t_\tau$ free columns, which can be fewer
+than its $k_\tau$ coupled rows; reduced leaves can then be square or tall. Only the reduced matrix as a
+whole has to have full row rank, and Lemma~\ref{lem:rank} shows that it does.
+
+\subsection{Decoupling}\label{subsec:decoupling}
+\paragraph{Step 1 (row compression).} QL-factor $U_\tau=P_\tau\begin{bmatrix}0\\ \hat U_\tau\end{bmatrix}$
+and multiply $\tau$'s rows (of $\tilde D_\tau$ and of $b$) by $P_\tau^*$. With $t_\tau:=n_\tau-k_\tau$, the
+top $t_\tau$ rows of $P_\tau^*U_\tau$ are zero, so the top $t_\tau$ rows of $\tau$'s block row vanish
+outside $J_\tau$.
+
+\paragraph{Step 2 (column decoupling).} Right-compress the top rows,
+$(P_\tau^*\tilde D_\tau)(1{:}t_\tau,:)\,Q_\tau=[L_\tau,\;0]$, with $L_\tau\in\mathbb{C}^{t_\tau\times t_\tau}$
+lower triangular and $Q_\tau\in\mathbb{C}^{p_\tau'\times p_\tau'}$ unitary (this needs $t_\tau\le p'_\tau$, which
+holds by Lemma~\ref{lem:rank}), and apply $Q_\tau$ to all of $\tau$'s columns:
+\begin{equation}\label{eq:decoupled}
+\hat D_\tau:=P_\tau^*\tilde D_\tau Q_\tau=\begin{bmatrix}L_\tau & 0\\ C_\tau & E_\tau\end{bmatrix},\qquad
+\hat V_\tau^*:=\tilde V_\tau^*Q_\tau=\begin{bmatrix}\hat V_{\tau,1}^* & \hat V_{\tau,2}^*\end{bmatrix},
+\end{equation}
+with $C_\tau\in\mathbb{C}^{k_\tau\times t_\tau}$ and $E_\tau\in\mathbb{C}^{k_\tau\times f_\tau}$,
+$f_\tau=p_\tau'-t_\tau$. Write $\hat H=P^*\tilde HQ$ and $\hat b=P^*b$, with
+$P=\operatorname{diag}(P_\tau)$ and $Q=\operatorname{diag}(Q_\tau)$.
+
+\paragraph{Zero pattern.} Split the rows of each leaf into the top $t_\tau$ (\emph{decoupled} rows,
+set $\mathcal R_1$) and the bottom $k_\tau$ ($\mathcal R_2$), and its columns into the first $t_\tau$
+(\emph{forced} columns, $\mathcal C_1$) and the remaining $f_\tau$ (\emph{free} columns, $\mathcal C_2$).
+Then
+\begin{equation}\label{eq:blocktri}
+\hat H=\begin{bmatrix}\hat H(\mathcal R_1,\mathcal C_1)&\hat H(\mathcal R_1,\mathcal C_2)\\ \hat H(\mathcal R_2,\mathcal C_1)&\hat H(\mathcal R_2,\mathcal C_2)\end{bmatrix}
+=\begin{bmatrix}\mathbf L & 0\\ M & \bar H\end{bmatrix},\qquad \mathbf L=\operatorname{diag}(L_\tau).
+\end{equation}
+$\hat H(\mathcal R_1,\mathcal C_1)$ is block diagonal because a decoupled row of $\tau$ is zero in every other
+leaf's columns (Step~1), and $\hat H(\mathcal R_1,\mathcal C_2)=0$ because, in addition, it is zero in $\tau$'s
+own free columns (Step~2).
+
+\subsection{Forced solve and the reduced right-hand side}\label{subsec:forcedsolve}
+Write $\hat x_\tau=[X^{(1)}_\tau;X^{(2)}_\tau]$ (forced; free). The decoupled rows read
+$L_\tau X_\tau^{(1)}=\hat b_{\tau,1}$, solved by forward substitution. The remaining rows read
+$\bar H X^{(2)}=\bar b$ with
+\begin{equation}\label{eq:bbar}
+\bar b=\hat b(\mathcal R_2)-M X^{(1)}=\Big(\hat b-\hat H\begin{bmatrix}X^{(1)}\\0\end{bmatrix}\Big)(\mathcal R_2).
+\end{equation}
+For the bottom rows of leaf $\tau$ this is
+$\bar b_\tau=\hat b_{\tau,2}-C_\tau X_\tau^{(1)}-\hat U_\tau\big(B_{\tau\sigma}\hat V_{\sigma,1}^*X_\sigma^{(1)}+g_\tau\big)$,
+where $g_\tau$ collects the contributions of the non-sibling leaves through the nested bases: the forced
+unknowns of every leaf reach $\tau$'s rows. The second form of~\eqref{eq:bbar} computes $\bar b$ with one
+HSS matrix--vector product.
+
+\subsection{The reduced matrix is HSS with one level fewer}\label{subsec:merge}
+Discard the decoupled rows and the forced columns. For a parent $\pi$ of leaves $a,c$ the new leaf is
+\begin{equation}\label{eq:merge}
+\bar D_\pi=\begin{bmatrix}E_a & \hat U_aB_{ac}\hat V_{c,2}^*\\ \hat U_cB_{ca}\hat V_{a,2}^* & E_c\end{bmatrix},\qquad
+\bar U_\pi=\begin{bmatrix}\hat U_a&\\&\hat U_c\end{bmatrix}R_\pi,\qquad
+\bar V_\pi=\begin{bmatrix}\hat V_{a,2}&\\&\hat V_{c,2}\end{bmatrix}W_\pi,
+\end{equation}
+of size $(k_a+k_c)\times(f_a+f_c)$, and every generator above $\pi$ is unchanged. Its row basis
+$\bar U_\pi$ has $k_\pi\le k_a+k_c$ columns, so the reduced representation is again proper.
+
+\subsection{Reconstruction}\label{subsec:reconstruction}
+Given $\bar x=[X^{(2)}_\tau]_\tau$ from the recursive call,
+\[
+x_\tau=\Omega_\tau\begin{bmatrix}Q_\tau\begin{bmatrix}X^{(1)}_\tau\\X^{(2)}_\tau\end{bmatrix}\\0\end{bmatrix}
+\]
+(without the zero block when $\Omega_\tau=I$). At the root the matrix is a single dense block $D$ of
+full row rank, and the algorithm returns $D^+b$, computed by applying the factors of an SVD of $D$ to
+$b$ (for square $D$, $D^{-1}b$ from an LU factorization). Forming $D^+$ explicitly and multiplying would
+not be backward stable~\cite{higham}.
+
+% ======================================================================
+\section{Proof of Optimality}
+\label{sec:proof}
+
+\subsection{Four lemmas}
+
+\begin{lemma}[right unitary substitution]\label{lem:orthogonal}
+Let $\Omega$ be unitary with $A\Omega=[\tilde A,\;0]$, where the zero block may be empty. If $\tilde x^\star$
+is the minimum-norm solution of $\tilde A\tilde x=b$, then $x^\star=\Omega\begin{bmatrix}\tilde x^\star\\0\end{bmatrix}$
+is the minimum-norm solution of $Ax=b$.
+\end{lemma}
+\begin{proof}
+Every $x$ can be written uniquely as $x=\Omega[\tilde x;w]$, and since $\Omega$ is unitary,
+$\|x\|^2=\|\tilde x\|^2+\|w\|^2$. Because $Ax=[\tilde A,0][\tilde x;w]=\tilde A\tilde x$, the vector $x$ solves
+$Ax=b$ exactly when $\tilde x$ solves $\tilde A\tilde x=b$, whatever $w$ is. Among the solutions, $\|x\|$ is
+therefore smallest when $w=0$ and $\tilde x$ is the solution of least norm, $\tilde x=\tilde x^\star$.
+\end{proof}
+
+\begin{lemma}[two-sided unitary substitution]\label{lem:twosided}
+Let $P,Q$ be unitary, $\hat A=P^*AQ$ and $\hat b=P^*b$. If $\hat x^\star$ is the minimum-norm solution of
+$\hat A\hat x=\hat b$, then $x^\star=Q\hat x^\star$ is the minimum-norm solution of $Ax=b$.
+\end{lemma}
+\begin{proof}
+Since $P^*$ is invertible, $Ax=b$ holds if and only if $P^*AQ(Q^*x)=P^*b$, that is,
+$\hat A\hat x=\hat b$ with $\hat x=Q^*x$. The map $x\mapsto Q^*x$ is therefore a bijection between the
+two solution sets, and it preserves the norm, so it maps the minimizer of one problem to the minimizer
+of the other.
+\end{proof}
+
+\begin{lemma}[forced block]\label{lem:forced}
+Let $A=\begin{bmatrix}\mathbf L&0\\ M&\bar A\end{bmatrix}$ with $\mathbf L$ square and nonsingular, and
+$b=[b_1;b_2]$. Then the minimum-norm solution of $Ax=b$ is
+$x^\star=[\mathbf L^{-1}b_1;\ \bar x^\star]$, where $\bar x^\star$ is the minimum-norm solution of
+$\bar A\bar x=b_2-M\mathbf L^{-1}b_1$.
+\end{lemma}
+\begin{proof}
+The first block row reads $\mathbf Lx_1=b_1$, so every solution has $x_1=\mathbf L^{-1}b_1$. Substituting this
+into the second block row, $x=[x_1;x_2]$ solves $Ax=b$ if and only if $x_1=\mathbf L^{-1}b_1$ and
+$\bar Ax_2=b_2-M\mathbf L^{-1}b_1$. Since $\|x\|^2=\|\mathbf L^{-1}b_1\|^2+\|x_2\|^2$ and the first term is
+the same for every solution, $\|x\|$ is minimized by taking $x_2$ of least norm among the solutions of
+the reduced system.
+\end{proof}
+
+\begin{lemma}[full row rank is inherited]\label{lem:rank}
+Let $H$ have full row rank and apply one level (Sections~\ref{subsec:sizereduction}--\ref{subsec:merge}).
+Then (i) $t_\tau\le p'_\tau$ for every leaf, so $L_\tau$ is square; (ii) every $L_\tau$ is nonsingular;
+(iii) $\bar H$ has full row rank.
+\end{lemma}
+\begin{proof}
+The size reduction and the two unitary transformations do not change the rank:
+$H\Omega=[\tilde H,0]$ up to a column permutation, and $\hat H=P^*\tilde HQ$. Hence
+$\operatorname{rank}\hat H=\operatorname{rank}H=m$, and the $m$ rows of $\hat H$ are linearly independent.
+Consider the $t_\tau$ decoupled rows of leaf $\tau$. By Step~1 they are zero outside $\tau$'s $p'_\tau$
+columns, and $t_\tau$ linearly independent vectors with only $p'_\tau$ nonzero coordinates require
+$t_\tau\le p'_\tau$; this is (i). By Step~2 these rows equal $[L_\tau,\,0]$ on $\tau$'s columns, so their
+independence means that $L_\tau$ has rank $t_\tau$; this is (ii). For (iii), \eqref{eq:blocktri} factors as
+\[
+\begin{bmatrix}\mathbf L&0\\M&\bar H\end{bmatrix}=\begin{bmatrix}I&0\\M\mathbf L^{-1}&I\end{bmatrix}
+\begin{bmatrix}\mathbf L&0\\0&\bar H\end{bmatrix},
+\]
+and the first factor is invertible, so $m=\operatorname{rank}\mathbf L+\operatorname{rank}\bar H=\sum_\tau t_\tau+\operatorname{rank}\bar H$.
+Since $\bar H$ has $m-\sum_\tau t_\tau$ rows, it has full row rank.
+\end{proof}
+Note that no part of the proof uses Assumption~\ref{as:slack}: the inequality $t_\tau\le p'_\tau$ is a
+consequence of full row rank, not a hypothesis.
+
+\subsection{One level}
+
+\begin{theorem}[one level]\label{thm:onelevel}
+Let $H$ (depth $L\ge1$) have full row rank, and let $\bar x^\star$ be the minimum-norm solution of
+$\bar H\bar x=\bar b$. Then the vector $x$ assembled from $\bar x^\star$ as in
+Section~\ref{subsec:reconstruction} is the minimum-norm solution of $Hx=b$.
+\end{theorem}
+\begin{proof}
+Each step of Section~\ref{sec:algorithm} replaces the minimum-norm problem by an equivalent one, by one of
+the lemmas.
+\begin{enumerate}[leftmargin=1.5em,itemsep=2pt]
+\item \emph{Size reduction.} With $\Omega=\operatorname{diag}(\Omega_\tau)$, $H\Omega=[\tilde H,0]$ up to a column
+permutation. By Lemma~\ref{lem:orthogonal}, $x^\star=\Omega[\tilde x^\star;0]$, where $\tilde x^\star$ is the
+minimum-norm solution of $\tilde H\tilde x=b$.
+\item \emph{Row compression and column decoupling.} With $P=\operatorname{diag}(P_\tau)$ and
+$Q=\operatorname{diag}(Q_\tau)$, Lemma~\ref{lem:twosided} gives $\tilde x^\star=Q\hat x^\star$, where
+$\hat x^\star$ is the minimum-norm solution of $\hat H\hat x=\hat b$.
+\item \emph{Forced solve.} By~\eqref{eq:blocktri} and Lemma~\ref{lem:rank}(ii), $\hat H$ has the form of
+Lemma~\ref{lem:forced} with $\mathbf L$ nonsingular, so $\hat x^\star=[X^{(1)};\bar x^\star]$, where
+$X^{(1)}=\mathbf L^{-1}\hat b(\mathcal R_1)$ and $\bar x^\star$ is the minimum-norm solution of $\bar H\bar x=\bar b$
+with $\bar b$ as in~\eqref{eq:bbar}.
+\end{enumerate}
+Combining the three steps, $x^\star=\Omega\big[Q[X^{(1)};\bar x^\star];\,0\big]$, which is the reconstruction of
+Section~\ref{subsec:reconstruction} applied leaf by leaf.
+\end{proof}
+
+\subsection{All levels}
+
+\begin{theorem}[recursive algorithm]\label{thm:general}
+For every HSS matrix $H$ of full row rank, of any depth, the algorithm (Algorithm~\ref{alg:minnorm})
+returns $H^+b$ in exact arithmetic.
+\end{theorem}
+\begin{proof}
+Induction on the depth $L$. If $L=0$, $H=D$ is a dense matrix of full row rank and the algorithm returns
+$D^+b=H^+b$. Let $L\ge1$ and assume the claim for depth $L-1$. By Section~\ref{subsec:merge} and
+Lemma~\ref{lem:rank}(iii), $\bar H$ is an HSS matrix of depth $L-1$ with full row rank, so by the induction
+hypothesis the recursive call returns $\bar x^\star=\bar H^+\bar b$. By Theorem~\ref{thm:onelevel}, the
+reconstructed vector is $H^+b$.
+\end{proof}
+
+\subsection{Scope of the result}
+The theorems are statements about the HSS matrix $H$ in exact arithmetic. They carry over to the
+original matrix as far as the HSS representation is accurate: if $\|A-H\|\le\varepsilon\|A\|$, then $H^+b$
+differs from $A^+b$ by at most about $2\kappa(A)\varepsilon$ in relative terms, to first order (the
+condition number of the minimum-norm problem is about $2\kappa$, not $\kappa^2$~\cite{dh}).
+Floating-point stability is not proved here. Section~\ref{subsec:stab} shows that the computed solution
+is as accurate as the dense QR solution for $\kappa$ up to $\EtwoMaxKappaGraded$, the largest value tested.

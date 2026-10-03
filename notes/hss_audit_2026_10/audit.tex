@@ -1,0 +1,497 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage[margin=1in]{geometry}
+\usepackage{xcolor}
+\usepackage{booktabs,tabularx,longtable}
+\usepackage{enumitem}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage{microtype}
+\usepackage{array}
+\usepackage{upquote}
+\usepackage[section]{placeins}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+
+\newcommand{\code}[1]{\texttt{#1}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\sev}[1]{\textbf{#1}}
+\setlist{leftmargin=1.4em,itemsep=1pt,topsep=2pt}
+\renewcommand{\arraystretch}{1.12}
+
+\title{The \code{@hss} Class: Audit and Plan for New Overloads\\[2pt]
+\large what works, what is broken, and which MATLAB functions to add next}
+\author{Arjun Sethi-Olowin (audit prepared with Claude)}
+\date{October 2026}
+
+\begin{document}
+\maketitle
+
+\section{Summary}
+I read every file in \code{@hss/} and \code{+hssutil/}, ran the existing tests, and probed the class with
+edge cases the tests do not cover. Everything was run on the repository code as it is (no file was modified),
+in GNU Octave~8.4 through \code{octave\_compat}; items that depend on MATLAB itself are listed in
+Section~\ref{sec:matlab} for you to confirm in R2025b.
+
+\begin{itemize}
+\item \textbf{The existing tests pass.} All 109 \code{test\_hss} methods (2160 checks; run in Octave through a small
+stand-in for \code{matlab.unittest}) pass, except two checks that expect MATLAB's validator error identifier and
+one test that needs \code{inter\_decompv2}'s \code{arguments} block. \code{mp\_test\_solver} reports 0 failures.
+The solver, weighted min-norm, Tikhonov, products, transposes and extraction are correct on every input the
+tests use.
+\item \textbf{21 defects outside the tested inputs} (Table~\ref{tab:bugs}). Ten give a wrong answer with no
+error or warning. The three to fix first:
+\textbf{B06}, the randomized ID silently caps every off-diagonal rank at 120 (an exact HSS matrix with coupling
+rank 70 is reproduced with relative error $0.79$);
+\textbf{B02/B04}, \code{H(end,end)} returns \code{A(1,1)} (because \code{size(H)} is \code{[1 1]}) and
+\code{H(mask,1:3)} with a two-entry mask returns a $64\times3$ matrix;
+\textbf{B11}, a rank-deficient wide $H$ is ``solved'' with residual $4.1\times10^{-2}$ and no warning.
+\item \textbf{Five design decisions} should come before new overloads (Section~\ref{sec:decisions}): the class
+name clashes with hm-toolbox's \code{hss}; the property \code{size} blocks a \code{size} method; the recursive
+object tree is slow to walk; the compression tolerance needs a definition; and whether to inherit from
+\code{structuredmat}.
+\item \textbf{New overloads} (Section~\ref{sec:overloads}): about 40 functions in four priority tiers, plus a list of
+functions that should \emph{not} be overloaded and why. The six algorithms the plan depends on that are not
+already in the repository (recompression, block extraction, a cell-array matvec, the adjoint of the stored
+solve, log-determinant, exact Frobenius norm) were prototyped on the generator representation and checked
+against dense references: 17 of 17 checks pass (Table~\ref{tab:proto}). The adjoint solve gives tall least
+squares, \code{H'\textbackslash b} and \code{B/H} from the existing ULV factors, with no new factorization.
+\item \textbf{Plan} (Section~\ref{sec:plan}): six phases, each with its files, tests and a check that ends it.
+\end{itemize}
+
+\noindent New files (nothing existing was changed), in \code{hss\_examples/audit\_2026\_10/}:
+\code{hss\_audit\_probes.m} tests each defect (one line per bug; a line turns from \code{BUG} to \code{ok}
+when the bug is fixed, so it doubles as a regression list; B21 runs in MATLAB only); \code{hss\_proto\_check.m} runs the prototype checks;
+\code{proto/} holds the prototypes (\code{hssp\_*.m}).
+
+% ---------------------------------------------------------------------------
+\section{What the class does today}\label{sec:inventory}
+\begin{table}[h]
+\centering\small
+\caption{Public entry points and the private code behind them, with the \code{test\_hss} tags that cover them.}
+\label{tab:inventory}
+\begin{tabularx}{\linewidth}{@{}L{2.9cm}YL{2.2cm}@{}}
+\toprule
+Entry point & What it does (implementation) & Test tags\\
+\midrule
+\code{hss(A, ...)} & Builds from a dense $A$: halves rows and columns in lockstep to a uniform depth; randomized
+nested ID per off-diagonal block row/column (\code{inter\_decompv3}, sparse-sign sketch, threshold or fixed rank).
+Options \code{blocksize, tol, k, decomp, cutrule, sizeA, powerits, \dots} & construction, compression\\
+\code{H*X} & HSS times dense (\code{hss\_matvec}: up/down sweep, coefficients in a \code{dictionary}) & matvec, rectangular\\
+\code{H1*H2} & HSS times HSS on the same tree; ranks add, no truncation (\code{hss\_matmat}) & matmat\\
+\code{H\textbackslash B} & Square or wide: ULV min-norm solve (\code{hss\_ulvminnormsolve}); factors cached in
+\code{H.factorcache}; tall: error & solve, rectangular, minnorm\\
+\code{minnorm}, \code{tikhonov} & Weighted min-norm and Tikhonov via generator edits (\code{hss\_to\_gen},
+\code{hss\_gen\_weight}, \code{hss\_gen\_augment}, \code{hss\_from\_gen}); own cache entries & minnorm\\
+\code{H.'}, \code{H'} & Transpose / conjugate transpose by swapping generators & transpose\\
+\code{H(I,J)} & Entry extraction (\code{subsref} $\to$ \code{extract}); \code{':'} supported & extract\\
+\code{full}, \code{spy} & Dense matrix (\code{blockbuilder}); rank picture & full, construction\\
+\code{clearfactors} & Frees the cached factors & --\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent Not overloaded today: \code{size}, \code{end}, \code{plus}, \code{minus}, \code{uminus}, scalar
+\code{mtimes}, dense\code{*H}, \code{mrdivide}, \code{inv}, \code{det}, \code{norm}, \code{disp}, \code{subsasgn},
+and every function in Section~\ref{sec:overloads}.
+
+% ---------------------------------------------------------------------------
+\section{Audit findings}\label{sec:bugs}
+Severity: \sev{S1} wrong result without error or warning; \sev{S2} error or unusable result on valid input;
+\sev{S3} performance or portability; \sev{S4} message or clean-up. Numbers come from Octave runs of
+\code{hss\_audit\_probes.m} or of the experiments behind Section~\ref{sec:algorithms} (MATLAB timings will differ).
+
+\begin{small}
+\begin{longtable}{@{}L{0.75cm}L{0.6cm}L{5.4cm}L{7.6cm}@{}}
+\caption{Defects, most severe first within each group. ``File:line'' points at the cause.}\label{tab:bugs}\\
+\toprule
+ID & Sev & Symptom (measured) & Cause and proposed fix\\
+\midrule\endfirsthead
+\toprule ID & Sev & Symptom & Cause and fix\\ \midrule\endhead
+\midrule\multicolumn{4}{r}{\footnotesize continued}\\\endfoot
+\bottomrule\endlastfoot
+\multicolumn{4}{@{}l}{\emph{Construction}}\\
+B06 & S1 & Exact HSS, coupling rank 70 (leaf block-row rank 140): rank 120 found, matvec rel.\ error
+$0.79$; rank 100: $1.5$; rank 150: $2.8$. Coupling ranks 20 and 50 (block-row ranks 40, 100)
+are exact. &
+\code{inter\_decompv3.m:84,94}: threshold mode sketches with $\ell=\min(50,m,n)+10=60$ rows, so the sketch
+can never see rank $>60$; ranks in $(60,120]$ are found only when the one-vector verification
+(l.~380--406) triggers a redraw, at most twice ($\ell=60,120$). Fix:
+adaptive range finder: if the detected rank reaches $\ell-p$ (the sketch is saturated), double $\ell$ and
+resketch until it is not, or until $\ell\ge\min(m,n)$; then the verification is a safety net, not the rank
+mechanism. Raise \code{hss:notLowRank} when $k=\min(m,n)$.\\
+B08 & S1 & \code{hss(randn(64), cutrule=@(k) k-1)}: \code{full(H)} is $65\times65$. &
+\code{hss\_constructor.m:162,241} trusts \code{cutrule}; the depth (l.~75--87) assumes halving, so uneven cuts
+reach blocks of size 1 and then 0. Fix: require $1\le$\code{cutrule(k)}$\le k-1$, and compute the depth by
+simulating \code{cutrule} itself, not halving.\\
+B09 & S1 & \code{hss(randn(64), sizeA=[32 32])} is accepted; \code{H.size} is $[32~32]$. &
+\code{sizeA} (l.~13) is an internal value exposed as an option. Fix: remove it from the options (or error when
+it differs from \code{size(A)}).\\
+B13 & S1 & A NaN entry: built without error; NaN spreads to most entries of every product (112 of 128 in
+$H\mathbf 1$). &
+No input check. Fix: \code{mustBeFinite} on \code{A}.\\
+B14 & S2 & \code{hss(sparse A)} errors inside \code{inter\_decompv3} (Octave). In MATLAB the sketch $SA$ is
+sparse, and sparse \code{qr} orders columns to reduce fill, not to reveal rank, so ranks would be wrong
+(unverified). & Fix: \code{A = full(A)} block by block in the constructor (or accept sparse only through the
+planned matvec-based constructor).\\
+B15 & S2 & A matrix with fewer than $2\times$\code{blocksize} rows or columns (one leaf) has \code{Ir = Ic = []} and empty \code{blocksize};
+\code{spy(H)} errors. & \code{hss\_constructor.m:95-97}. Fix: set \code{Ir=[1 m]}, \code{Ic=[1 n]},
+\code{blocksize}, as \code{hss\_from\_gen} already does.\\
+B20 & S3 & \code{+hssutil} has \code{sparsesign.c} and the compiled \code{sparsesign.mexmaca64} only:
+\code{hss(A)} fails on Windows, Linux and Intel Macs unless someone runs \code{mex}. & Fix: add a plain
+\code{+hssutil/sparsesign.m} (\code{octave\_compat/sparsesign\_octave.m} can serve) and use the MEX when
+\code{exist(...,'file')==3}.\\
+\multicolumn{4}{@{}l}{\emph{Indexing and size}}\\
+B02 & S1 & \code{H(end,end)} returns \code{A(1,1)}; any \code{end} in an index is 1. &
+No \code{end} method; MATLAB's default uses the object-array size, \code{[1 1]}. Fix: \code{end.m} returning
+\code{H.size(k)} (needs B01).\\
+B03 & S1 & \code{H(n+1,1)}, \code{H(0,1)}, \code{H(2.5,1)} return 0. &
+\code{extract.m:33-38}: indices outside both halves match no \code{ismember} mask and keep the zero
+initialization. Fix: validate indices in \code{subsref} (integer, $1\le i\le m$).\\
+B05 & S1 & Internal nodes are not matrices: \code{H.A22(1:3,1:3)} returns all zeros; \code{H.A22*v} and
+\code{H.A22\textbackslash v} error; \code{minnorm(H.A22,b,'Weight',w)} calls the tree non-uniform. &
+Nodes keep global \code{Ir/Ic}, the global \code{levelcount}, and \code{isroot=false}. Fix: a
+\code{subtree(H,path)} method that re-roots a copy (shift indices, set depth, add a cache); make the tree
+properties \code{SetAccess=protected} and document \code{subtree} as the way to get a block (the probe
+switches to \code{subtree(H,2)} once it exists).\\
+B01 & S2 & \code{size(H)} is \code{[1 1]}; \code{numel}, \code{isscalar}, \code{length} follow. &
+Property named \code{size}, no method. Fix: Decision D2.\\
+B04 & S1 & \code{H(mask,1:3)} with a 64-entry mask holding 2 \code{true}s returns a $64\times3$ matrix (the mask
+values 0/1 are used as indices); \code{H(k)} (linear) errors. & \code{extract.m:33-38}. Fix: convert logical
+masks with \code{find};
+map linear indices with \code{ind2sub}; support \code{H(:)} only if you want it (it densifies).\\
+B19 & S3 & \code{H(1,end)} builds the whole $n/2\times n/2$ block: time $\times9.6$ from $n=2048$ to 8192
+(probe). \code{H(I,J)}, $5\times4$ indices: $0.51$\,s at $n=8192$ vs $0.049$\,s for the prototype. &
+\code{extract.m:45,50} call \code{blockbuilder}. Fix: \code{hssp\_extract} (Section~\ref{sec:extract}).\\
+\multicolumn{4}{@{}l}{\emph{Solves}}\\
+B10 & S4 & Square $H$ with a zero row and column: \code{H\textbackslash b} returns $x$ with residual
+$4.8\times10^{-2}$ after only the generic ``matrix singular to machine precision'' warning of a triangular solve
+(\code{hss\_ulvminnormsolve.m:271}); MATLAB's own \code{A\textbackslash b} behaves the same way. The user is not
+told that $H$ is singular or where. & A singular $L_\tau$ is not checked (solver header). Fix:
+after each \code{lq}, compare $\min_i|(L_\tau)_{ii}|$ with $n\,\epsilon\,\|H\|$ (estimate $\|H\|$ once by power
+iteration); warn \code{hss:singular}; same with \code{rcond} for the root LU.\\
+B11 & S1 & Wide $H$ with two equal rows, random $b$: residual $4.1\times10^{-2}$, no warning (open item in the
+status doc). & \code{hss\_ulvminnormsolve.m:128} truncates the root SVD silently. Fix: warn
+\code{hss:rankDeficient} when the numerical rank $r<m$, and report $r$.\\
+B12 & S1 & \code{minnorm} with a singular leaf block in a cell \code{Weight} runs without error. &
+\code{hss\_weightops.m:18-24} checks block sizes only. Fix: \code{rcond} check per block; reject NaN/Inf
+vector weights.\\
+B07 & S2 & \code{(H*H*H)\textbackslash b}: leaf rank 18 $>$ 16 leaf rows $\to$ \code{improperRanks}. &
+\code{hss\_matmat} adds ranks with no truncation. Fix: \code{compress} (Section~\ref{sec:compress}); call it
+inside \code{mtimes}/\code{plus} when a rank exceeds its block, or always with a tolerance option.\\
+B16 & S2 & \code{H\textbackslash 3} for a one-row $H$ errors (``scalar mat multiplication''). &
+\code{mldivide.m:12} treats any scalar \code{b} as scalar division. Fix: test \code{isscalar(b) \&\& H.size(1)
+\textasciitilde= 1}.\\
+\multicolumn{4}{@{}l}{\emph{Operators and messages}}\\
+B17 & S2 & (a) \code{2*H}, \code{H*2}, \code{-H}, \code{H+H}, \code{x'*H} and (b) \code{B/H} all error. &
+Not implemented. \code{x'*H} only needs \code{(H.'*x.').'}, since \code{transpose} exists. See
+Section~\ref{sec:overloads}.\\
+B18 & S4 & \code{H*v} with a wrong length: ``nonconformant arguments (op1 is 16x16, op2 is 21x1)''. &
+No check in \code{mtimes}. Fix: check \code{size(X,1)==H.size(2)}, error \code{hss:mtimes:dimension}.\\
+B21 & S2 & Two other \code{@hss} folders exist: hm-toolbox's (installed by \code{setup.m}) and
+\code{Solver\_files/\allowbreak modifed\_HMtoolbox\_files2019/\allowbreak @hss}. Adding \code{structmats} ``with subfolders'' puts both on
+the path, and \code{hss(A)} calls whichever comes first. & Fix: Decision D1.\\
+\end{longtable}
+\end{small}
+
+\paragraph{Lower-priority notes.}
+\begin{enumerate}[label=N\arabic*.]
+\item \code{inter\_decompv3}'s header documents \code{ctype='rank'}, but the code tests for \code{'k'}; with
+\code{'rank'} it silently uses rank 50. Validate \code{ctype}.
+\item The ID verification uses one probe vector (\code{nverify = min(1,n)}, l.~307).
+\item The constructor's \code{tol} is relative to each block's own largest pivot, so tiny blocks are resolved to
+the same relative accuracy as large ones (more rank than a global accuracy needs). See D4.
+\item \code{warning('Off-diagonal block may not be low-rank.')} has no identifier, so it cannot be silenced
+selectively; it floods the test logs.
+\item Debug output \code{disp('here rows')}, \code{disp('here cols')} remains (\code{hss\_constructor.m:326,350};
+unreachable for trees the constructor builds).
+\item Unused properties: \code{Q}, \code{S}, \code{minnormQ}, \code{nullorrange}; \code{lowrankrows/cols} are
+meaningless after \code{mtimes} or \code{hss\_from\_gen}.
+\item Children store the global \code{levelcount} (the leaf depth), not their own remaining depth (cause of part
+of B05).
+\item Tikhonov with $\lambda\gg\|H\|$: relative error of $x$ grows like $\epsilon\lambda/\|H\|$ ($6.7\times10^{-10}$ wide, $1.1\times10^{-9}$
+tall at $\lambda=10^8$; $\le1.2\times10^{-13}$ for $\lambda\le10^2$). This is the conditioning of the augmented system,
+not a bug; document it ($x\approx H^*b/\lambda^2$ there).
+\item Lockstep row/column splitting: $64\times4096$ with \code{blocksize} 16 gives $16\times1024$ leaves; $300\times20000$ with
+\code{blocksize} 200 gives no tree at all (one dense leaf). Warn when a leaf's aspect ratio is large; the real
+fix is separate row and column depths (large change).
+\item \code{hss\_matvec} needs \code{dictionary} (R2022b+). The cell-array version (\code{hssp\_matvec}) has no
+such requirement; in Octave it is 20--115$\times$ faster and linear in $n$ (the Octave \code{dictionary}
+stand-in is not; MATLAB numbers are for you to measure with \code{hss\_proto\_check}).
+\item \code{test\_scalar\_multiply\_throws} and \code{test\_left\_multiply\_throws} assert current limitations; they
+must change when the overloads land.
+\end{enumerate}
+
+% ---------------------------------------------------------------------------
+\section{Decisions to make before adding overloads}\label{sec:decisions}
+\begin{description}[leftmargin=1.2em,style=nextline]
+\item[D1. Class name.] Three \code{@hss} folders can be on the path (B21). Options: (a) rename to
+\code{hssmat} (matches \code{toeplitzmat}, \code{hankelmat}); (b) move it into a package
+(\code{+structmats/\allowbreak @hss}, called as \code{structmats.hss}); (c) keep the name and drop hm-toolbox from the
+path. I recommend (a): it is a one-time search-and-replace and removes the clash for every user.
+\item[D2. The \code{size} property.] A \code{size} method is needed for \code{end}, \code{size(H,1)} and most
+of MATLAB's generic code. A property and a method with the same name are at best confusing and, as far as I
+know, not allowed in one class; check with a one-line \code{size.m}. Either way, rename the property (e.g.\
+\code{sz}) in the same pass as D1. Do not overload \code{numel}: MATLAB's documentation advises classes with custom
+indexing to leave it alone (it determines the number of outputs of indexing; \code{numArgumentsFromSubscript} is
+the supported hook).
+\item[D3. Storage: object tree or flat generators.] Every node is a full \code{hss} object with 25
+properties (plus the hidden cache). \code{minnorm} and \code{tikhonov} already convert to generator cell arrays
+(\code{hss\_to\_gen}) on every new factorization, and every prototype here works on those arrays.
+Options: (a) keep the tree, add the new code on generators, convert on demand (least change); (b) store
+the generators as the internal representation and build tree views only for \code{spy} and debugging (fastest:
+the cell-array matvec is linear and much faster in Octave, B19 disappears, no \code{dictionary}). (b) touches
+the constructor, solver and products, so plan it as its own phase (Phase~5) after the overloads exist and are
+tested on (a).
+\item[D4. Meaning of the tolerance.] For \code{compress}, \code{plus} and products, decide between a relative
+tolerance per block (the constructor's current rule, N3) and an absolute one, $\tau\|H\|_2$ (hm-toolbox's
+choice). The absolute rule bounds $\|H-\tilde H\|_2$ by a small, depth-dependent multiple of $\tau\|H\|_2$ and gives
+smaller ranks; I recommend it, with $\|H\|_2$ from \code{normest}.
+\item[D5. Inherit from \code{structuredmat}?] The repo's abstract class supplies \code{end} and naive fallbacks
+that call \code{full}. Inheriting gives API consistency, but a fallback that densifies a $10^6\times10^6$
+matrix after a warning is worse than an error. Recommendation: inherit only if every inherited fallback is
+overridden with an HSS method or an explicit error.
+\end{description}
+
+% ---------------------------------------------------------------------------
+\section{Proposed overloads}\label{sec:overloads}
+Notation: $n$ the size, $r$ the maximum rank, $L=O(\log n)$ the depth. ``Proto'' marks algorithms checked in
+\code{hss\_proto\_check.m}. Priority A is needed first, because other functions and generic MATLAB code rely on it.
+
+\begin{small}
+\begin{longtable}{@{}L{2.4cm}L{4.2cm}L{4.5cm}L{2.2cm}L{0.8cm}@{}}
+\caption{Overloads to add, grouped by priority.}\label{tab:overloads}\\
+\toprule
+Function & MATLAB meaning for $H$ & HSS algorithm & Cost & Prio\\
+\midrule\endfirsthead
+\toprule Function & Meaning & Algorithm & Cost & Prio\\ \midrule\endhead
+\midrule\multicolumn{5}{r}{\footnotesize continued}\\\endfoot
+\bottomrule\endlastfoot
+\multicolumn{5}{@{}l}{\emph{A. MATLAB semantics (indexing, size, display)}}\\
+\code{size(H,dim)}, \code{length}, \code{ndims}, \code{isempty} & dimensions & read \code{sz} (D2) & $O(1)$ & A\\
+\code{end} & last index in \code{H(i,j)} & \code{H.sz(k)} & $O(1)$ & A\\
+\code{subsref} (rewrite) & \code{H(I,J)}: logical, linear, \code{end}, bounds checks & \code{hssp\_extract}:
+partial bases restricted to $I,J$ & $O((|I|{+}|J|)rL$\newline$+|I||J|)$ & A, proto\\
+\code{subsasgn} & \code{H(i,j)=v} & error \code{hss:readOnly} (an entry change is a rank-one change; offer
+\code{lowrankupdate}) & -- & A\\
+\code{disp}/\code{display} & show the matrix & one summary: size, depth, leaf sizes, min/mean/max rank, memory,
+cached factors; never the whole tree & $O(n)$ & A\\
+\code{isreal} & & all generators real & $O(nr)$ & A\\
+\code{subtree} (new) & usable sub-block (B05) & re-rooted copy & $O(\text{size})$ & A\\
+\multicolumn{5}{@{}l}{\emph{B. Arithmetic}}\\
+\code{uminus}, \code{uplus} & $-H$, $+H$ & negate all $D_\tau$ and $B$ & $O(nr)$ & B, proto\\
+\code{mtimes} & $sH$, $Hs$; $XH$ for dense $X$ & scale $D,B$; $XH=(H^{\mathsf T}X^{\mathsf T})^{\mathsf T}$ &
+$O(nr)$; $O(nrp)$ & B, proto\\
+\code{mrdivide} & $H/s$; $B/H$ & scale; $B/H=(H^*\backslash B^*)^*$: adjoint of $H$'s factors (wide/square
+$H$), forward solve with $H^*$'s factors (tall $H$; min-norm, not MATLAB's basic solution) & $O(nr)$ & B\\
+\code{plus}, \code{minus} & $H_1\pm H_2$ (same tree); $H\pm D$, $D$ diagonal or sparse diagonal; $H\pm s$ &
+concatenate bases, $B=\mathrm{blkdiag}(B_1,B_2)$, then \code{compress}; diagonal: leaf $D_\tau$ only; scalar:
+MATLAB adds $s$ to \emph{every} entry, a rank-one update (rank $+1$ everywhere). A mismatched tree is an error. &
+$O(nr^2)$ & B, proto\\
+\code{compress} (new) & re-truncate to tolerance, make proper & orthonormalize up, truncate down
+(Section~\ref{sec:compress}) & $O(nr^2)$ & B, proto\\
+\code{lowrankupdate} (new) & $H+UV^*$ & append $U,V$ to the bases at every level, then \code{compress} &
+$O(n(r{+}p)^2)$\newline\hspace*{0pt} & B\\
+\code{mpower} & $H^p$, integer $p$ & repeated squaring with \code{compress}; $p<0$: error until \code{inv} &
+$O(nr^2$\newline$\cdot\log p)$ & B\\
+\code{conj}, \code{real}, \code{imag} & & conj all generators; $\mathrm{real}(H)=(H+\bar H)/2$, then \code{compress} &
+$O(nr^2)$ & B\\
+\multicolumn{5}{@{}l}{\emph{C. Solves and scalar quantities}}\\
+\code{mldivide}, tall $H$ & least squares $H^+b$ & factor $H^*$ (wide), apply the \emph{adjoint} of its min-norm
+solve (Section~\ref{sec:adjoint}); cache under a second key & $O(nr^2)$, then $O(nr)$ & C, proto\\
+\code{H'\textbackslash b} & $(H^*)^{-1}b$ or $(H^*)^+b$ & for square/wide $H$: adjoint of $H$'s own cached factors,
+no new factorization. Needs \code{ctranspose}/\code{transpose} to hand $H$'s cache handle to the result with an
+``adjoint'' flag, assigned \emph{after} the generator swaps (each set method otherwise gives $H'$ an empty cache) &
+$O(nr)$ & C, proto\\
+\code{logdet} (new), \code{det} & $\log|\det H|$, $\det H$ & sum of $\log|(L_\tau)_{ii}|$ over levels plus the root
+LU; phase from $\det P_\tau\det Q_\tau$ (Section~\ref{sec:logdet}). \code{det} overflows for large $n$; document
+\code{logdet} as the one to use & $O(nr^2)$ & C, proto\\
+\code{norm(H,'fro')} & & exact from orthonormal generators & $O(nr^2)$ & C, proto\\
+\code{norm(H)}, \code{normest} & $\|H\|_2$ & power iteration on $H^*H$ (matvecs) & $O(nrk)$ & C\\
+\code{norm(H,1/Inf)} & & exact needs all entries ($O(n^2)$): use \code{normest1} with matvecs, say it is an estimate & $O(nrk)$ & C\\
+\code{condest} & $\kappa_1$ estimate & \code{normest1} on $H$ and on $H^{-1}$ (cached solves) & $O(nrk)$ & C\\
+\code{inv} & $H^{-1}$ & keep the error for now; later, HSS inversion from the ULV factors or construction from
+solves (Phase 6). With cached factors, \code{H\textbackslash B} does what users need \code{inv} for & -- & C\\
+\code{chol} & SPD factor & later: symmetric ULV (Xia); halves work, keeps symmetry & $O(nr^2)$ & C\\
+\multicolumn{5}{@{}l}{\emph{D. Structure and spectra}}\\
+\code{diag}, \code{trace} & & concatenate / sum leaf diagonals ($k=0$ only) & $O(n)$ & D\\
+\code{tril}, \code{triu} & & zero the upper (lower) couplings, \code{tril} of each $D_\tau$; stays HSS &
+$O(nr)$ & D\\
+\code{blkdiag} & $\mathrm{diag}(H_1,H_2)$ & new root, zero couplings (equal depths) & $O(1)$ & D\\
+\code{sum}, \code{mean} & & $H^{\mathsf T}\mathbf 1$ or $H\mathbf 1$ & $O(nr)$ & D\\
+\code{eigs}, \code{svds} & a few eigen/singular values & wrap function handles: $Hx$; shift-invert with cached
+solves & $O(nrk)$ & D\\
+\code{issymmetric}, \code{ishermitian} & & randomized test $\|Hx-H^*x\|\le\tau\|H\|\|x\|$; say so in the help & $O(nr)$ & D\\
+\end{longtable}
+\end{small}
+
+\paragraph{Not to overload, and why.}
+\begin{itemize}
+\item \code{numel}: changes the output count of indexing (D2).
+\item \code{horzcat}, \code{vertcat}: $[H_1~H_2]$ is not HSS on any tree that respects both inputs (each block
+row of $H_1$ couples to all of $H_2$ at full rank in general). Only \code{blkdiag} keeps the structure.
+\item \code{eig}, \code{svd}, \code{lu}, \code{qr} in full: $O(n^3)$ or not structure-preserving; \code{eigs},
+\code{svds} and the ULV factorization cover the uses.
+\item \code{expm}, \code{sqrtm}, \code{logm}, \code{funm}: not cheaply HSS-preserving. A later option is a
+rational approximation through shifted solves, each $O(nr^2)$.
+\item Elementwise functions (\code{abs}, \code{exp}, \code{.\^{}}): destroy low rank. Hadamard product
+\code{H1.*H2} is HSS with rank $r_1r_2$; add only if a use appears.
+\item \code{double}, \code{single}, \code{sparse}: ambiguous for a compressed matrix; keep \code{full} as the one
+explicit conversion.
+\end{itemize}
+
+% ---------------------------------------------------------------------------
+\section{Algorithms behind the new functions}\label{sec:algorithms}
+Generators as in \code{hss\_to\_gen}: leaf blocks $D_\tau$; leaf bases $U_\tau,V_\tau$; translations
+$R_\tau,W_\tau$ with $\hat U_\tau=\mathrm{diag}(\hat U_{\alpha},\hat U_{\beta})R_\tau$ for children
+$\alpha,\beta$ (same for $\hat V$); couplings $H(I_\alpha,J_\beta)=\hat U_\alpha B_{\alpha\beta}\hat V_\beta^*$.
+
+\subsection{Recompression (\code{hssp\_orth}, \code{hssp\_compress})}\label{sec:compress}
+\begin{enumerate}
+\item \emph{Orthonormalize, bottom up.} At a leaf, $U_\tau=Q_\tau R_\tau$ (economic QR); replace $U_\tau$ by
+$Q_\tau$ and push $R_\tau$ into everything that multiplies $\hat U_\tau$: the coupling where $\tau$ is the row
+cluster ($B\leftarrow R_\tau B$) and $\tau$'s block of the parent translation. At a parent, QR the updated
+translation and continue. Same for $V$ with $B\leftarrow BR_\tau^*$. Exact; ranks become
+$\le$ block sizes, so this alone fixes \code{improperRanks}.
+\item \emph{Truncate, top down.} With orthonormal bases, the off-diagonal block row of $\tau$ is
+$\hat U_\tau S_\tau\,(\text{orthonormal})$, where $S_\tau=[\,B_{\tau,\text{sib}},\;R_\tau^{(\text{parent})}C_{p}\,]$
+and $C_p=W_p^*S_p$ is the parent's truncated coefficient. Take the SVD $S_\tau=W\Sigma X^*$, keep $k'$ columns of
+$W$, and update $\hat U_\tau\leftarrow \hat U_\tau W$ (leaf basis or translation columns),
+$B_{\tau,\text{sib}}\leftarrow W^*B$, parent rows $\leftarrow W^*(\cdot)$. Then the same for columns.
+\end{enumerate}
+Prototype results: $H^3$ (leaf rank 18 $>$ 16 rows) compresses to rank 5 with relative error $1.8\times10^{-13}$,
+and its solve agrees with dense to $2.1\times10^{-13}$; $H+H$ for an exact rank-10 HSS goes back to rank 10;
+time 0.07, 0.15, 0.30, 0.59, 1.36\,s for $n=2^{12},\dots,2^{16}$ (Octave), i.e.\ linear.
+
+\subsection{Block extraction (\code{hssp\_extract})}\label{sec:extract}
+Sort the requested rows and columns into leaves; take the matching rows of each leaf basis; move up the tree with
+$\hat U_p(I_p,:)=\mathrm{diag}(\hat U_\alpha(I_\alpha,:),\hat U_\beta(I_\beta,:))R_p$; at each node fill the two
+coupling blocks $\hat U_\alpha(I_\alpha,:)B_{\alpha\beta}\hat V_\beta(J_\beta,:)^*$. Order and repeats are kept;
+indices are validated (fixes B03). Times for \code{H(I,J)} with $|I|=5$, $|J|=4$: $0.020/0.131/0.512$\,s
+(current) vs $0.008/0.023/0.049$\,s (prototype) at $n=1024/4096/8192$.
+
+\subsection{Adjoint of the stored solve: tall least squares, \code{H'\textbackslash b}, \code{B/H}}\label{sec:adjoint}
+For a wide or square $W$ of full row rank, the stored solve is a linear map $\mathcal S$ with $\mathcal S=W^+$
+(memo~1). Each level of $\mathcal S$ is a linear map assembled from unitary maps ($P_\tau^*$, $Q_\tau^*$), the
+isometries $\Omega_\tau^*$ (economic size reduction), triangular solves ($L_\tau^{-1}$), selections, one product
+with the transformed matrix $\hat H$, and the next level. Taking the adjoint of this combination piece by piece
+gives
+$\mathcal S^*=(W^+)^*=(W^*)^+$, at the same $O(nr)$ cost, with $\hat H^*$ applied by the existing
+\code{ctranspose}. Therefore:
+\begin{itemize}
+\item tall $H$ (full column rank): factor $W=H^*$ once; $H^+b=\mathcal S^*b$ (least squares);
+\item square or wide $H$: $(H^*)^+b=\mathcal S^*b$ uses $H$'s own cached factors, no refactorization;
+\item $B/H=\big((H^*)^+B^*\big)^*$ for wide or square $H$ (adjoint of $H$'s factors; this is exactly MATLAB's
+\code{B/A=(A'\textbackslash B')'}). For tall $H$, $H^*$ is wide: use the \emph{forward} min-norm solve with $H^*$'s
+factors, which gives $B H^+$; MATLAB would return a basic solution instead, the same deliberate deviation as
+\code{H\textbackslash b} for wide $H$.
+\end{itemize}
+Prototype: tall $1024\times512$ least squares agrees with \code{pinv} to $6.5\times10^{-14}$ (complex,
+Table~\ref{tab:proto}) and $7.4\times10^{-14}$ (real, separate run); square $H'\backslash b$ from $H$'s factors to $\le8\times10^{-13}$. A proof that the
+adjoint equals $(W^*)^+$ is two lines from memo~1's Theorem (the solve is exactly $W^+$, and $(W^+)^*=(W^*)^+$);
+it belongs in memo~1's open problems or as a short appendix.
+
+\subsection{Log-determinant (\code{hssp\_logdet})}\label{sec:logdet}
+For square leaves there is no size reduction, and one level gives $P^*HQ^*$ block lower triangular after the same
+permutation of rows and columns (forced rows couple only to their own forced columns, through $L_\tau$).
+Hence $\log|\det H|=\sum_\tau\log|\det L_\tau|+\log|\det H_{\text{red}}|$, recursively, ending with the root LU;
+the phase is the product of $\det P_\tau\det Q_\tau/|\cdot|$ (the stored factors, $\hat H=P^*HQ^*$), the phases of
+$\mathrm{diag}(L_\tau)$ and the root pivots. Prototype: absolute error $4.6\times10^{-13}$ to $1.1\times10^{-11}$
+against dense LU on five matrices (real and complex random HSS, an exponential kernel with $\log|\det|=-2151$);
+phase error $\le1.4\times10^{-12}$. Use: Gaussian-process likelihoods,
+where $\log\det$ of a kernel matrix is the expensive part.
+
+\subsection{Exact Frobenius norm, cell-array matvec}
+After orthonormalization the blocks $D_\tau$ and $\hat U B\hat V^*$ are disjoint and the bases orthonormal, so
+$\|H\|_F^2=\sum\|D_\tau\|_F^2+\sum\|B\|_F^2$ (error $5\times10^{-14}$). \code{hssp\_matvec} stores the up and
+down coefficients in cell arrays indexed by level and node: $0.007$ vs $0.18$\,s at $n=4096$ and $0.10$ vs
+$11.8$\,s at $n=65536$ in Octave (the second column is the Octave \code{dictionary} stand-in; measure MATLAB with
+\code{hss\_proto\_check}).
+
+\begin{table}[h]
+\centering\small
+\caption{Output of \code{hss\_proto\_check.m} (Octave 8.4). Errors are relative unless marked.}\label{tab:proto}
+\begin{tabularx}{\linewidth}{@{}Yrr@{}}
+\toprule
+Check & Value & Limit\\
+\midrule
+$2H+(-3+i)H_B$ via \code{hssp\_scale}, \code{hssp\_plus} & $4.9\times10^{-18}$ & $10^{-13}$\\
+\code{hssp\_orth}: change of the matrix & $2.6\times10^{-17}$ & $10^{-13}$\\
+\code{hssp\_orth}: $\max_\tau\|U_\tau^*U_\tau-I\|$ (leaves) & $7.9\times10^{-16}$ & $10^{-13}$\\
+\code{hssp\_compress}$(H^3)$: error & $1.8\times10^{-13}$ & $10^{-11}$\\
+\code{hssp\_compress}$(H^3)$: leaf rank (was 18) & 5 & 8\\
+\code{hssp\_compress}$(H^3)\backslash b$ vs dense & $2.1\times10^{-13}$ & $10^{-10}$\\
+\code{hssp\_extract}: $H(I,J)$, any order, repeats & $7.5\times10^{-19}$ & $10^{-13}$\\
+\code{hssp\_extract}: a full row & $7.8\times10^{-18}$ & $10^{-13}$\\
+\code{hssp\_extract}: out-of-range index rejected & yes & yes\\
+\code{hssp\_matvec} vs \code{H*x} & $1.9\times10^{-15}$ & $10^{-13}$\\
+\code{hssp\_fro} vs sum of squares & $5.3\times10^{-14}$ & $10^{-13}$\\
+tall least squares (adjoint) vs \code{pinv}, complex $1024\times512$ & $6.5\times10^{-14}$ & $10^{-11}$\\
+square $H'\backslash b$ from $H$'s factors & $5.6\times10^{-13}$ & $10^{-11}$\\
+\code{hssp\_logdet}: absolute error & $4.6\times10^{-13}$ & $10^{-9}$\\
+\code{hssp\_logdet}: phase error & 0 & $10^{-12}$\\
+\code{hssp\_logdet}, complex $H$: absolute error & $6.8\times10^{-13}$ & $10^{-9}$\\
+\code{hssp\_logdet}, complex $H$: phase error & $1.4\times10^{-12}$ & $10^{-10}$\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ---------------------------------------------------------------------------
+\section{Implementation plan}\label{sec:plan}
+Each phase ends when its tests pass in MATLAB and the matching \code{hss\_audit\_probes} lines read \code{ok}.
+New tests go into \code{test\_hss.m} under a tag per phase; small cases compare with dense, large cases
+($n\ge2^{15}$) build from generators and never form the dense matrix.
+
+\begin{description}[leftmargin=1.2em,style=nextline]
+\item[Phase 0: decisions and safety (small).] D1--D5. Rename class/property, and update
+\code{hss\_audit\_probes.m}, \code{hss\_proto\_check.m} and the tests in the same commit (they call \code{hss(...)}
+and \code{H.size}). Fix B06 (adaptive ID), B08, B09, B13, B14, B15, B16, B18, B20, N1, N4, N5. Add
+\code{mustBeFinite}, warning identifiers.
+\emph{Done when:} probes B06, B08, B09, B13--B16, B18, B20, B21 read \code{ok}; the constructor tests still pass.
+\item[Phase 1: MATLAB semantics (small--medium).] \code{size}, \code{end}, \code{length}, \code{ndims},
+\code{isempty}, \code{isreal}, \code{disp}; rewrite \code{subsref} on \code{hssp\_extract} (logical, linear,
+bounds); \code{subsasgn} error; \code{subtree}; \code{SetAccess=protected} on tree properties.
+\emph{Done when:} B01--B05 and B19 read \code{ok} (B19: \code{H(1,end)} time ratio $\le6$ from $n=2048$ to 8192);
+\code{H(end,end)}, \code{H(mask,:)}, \code{H(k)} match dense.
+\item[Phase 2: arithmetic and compression (medium).] Port \code{hssp\_orth}/\code{hssp\_compress} as
+\code{compress(H, tol)}; \code{uminus}, \code{uplus}, scalar and dense \code{mtimes}, \code{mrdivide} by a scalar,
+\code{plus}/\code{minus} (HSS, diagonal, scalar), \code{lowrankupdate}, \code{mpower}, \code{conj},
+\code{real}, \code{imag}; \code{mtimes(H1,H2)} compresses when a rank exceeds its block (B07).
+\emph{Done when:} B07, B17a read \code{ok}; $\|\text{compress}(H)-H\|_2$ is a small multiple
+of $\tau\|H\|_2$ on all test families (record the multiple in the test); ranks of $H+H$ equal those of $H$; compression time linear to $n=2^{17}$.
+\item[Phase 3: solves and scalar quantities (medium).] Port \code{hssp\_ulv\_adjoint} into the solver file
+(\code{solve\_level\_adjoint}); tall \code{H\textbackslash b}; \code{H'\textbackslash b} from cached factors (adjoint
+flag on the transposed object's cache);
+\code{B/H}; \code{logdet}, \code{det}; \code{norm} (fro, 2, estimates for 1/Inf), \code{normest},
+\code{condest}; singularity and rank warnings (B10, B11), weight checks (B12).
+\emph{Done when:} B10--B12 and B17b read \code{ok}; tall least squares within
+$10\kappa\epsilon$ of dense QR on the memo-1 families; \code{logdet} within $10^{-10}|\log\det|$.
+\item[Phase 4: structure and spectra (small).] \code{diag}, \code{trace}, \code{tril}, \code{triu},
+\code{blkdiag}, \code{sum}, \code{mean}, \code{eigs}, \code{svds}, \code{issymmetric}, \code{ishermitian}.
+\emph{Done when:} each matches dense at $n\le2048$; \code{eigs(H,k,'smallestabs')} reuses cached factors.
+\item[Phase 5: flat generator storage (large, optional; D3).] Store generators; rewrite \code{mtimes},
+the constructor output and the solver input on them; keep \code{hss\_from\_gen}/\code{hss\_to\_gen} for
+compatibility. \emph{Done when:} the whole suite passes unchanged and \code{H*x} timing in MATLAB is no worse
+than today at every $n$ (Octave suggests much better).
+\item[Phase 6: later.] \code{inv} (HSS inversion), \code{chol} (symmetric ULV), a matvec/entry-based constructor
+(\code{hss(@(x) A*x, @(x) A'*x, @(I,J) A(I,J), m, n)}, which never forms $A$), public
+\code{hss.fromGenerators}, geometric splitting and rank-adaptive leaf sizes (open items in the status doc).
+\end{description}
+
+% ---------------------------------------------------------------------------
+\section{To confirm in MATLAB}\label{sec:matlab}
+\begin{enumerate}
+\item Run \code{runtests('test\_hss')} (in \code{hss\_examples/tests}), then \code{hss\_audit\_probes} and
+\code{hss\_proto\_check} (add \code{hss\_examples/audit\_2026\_10} to the path). Octave gives 20 \code{BUG} lines and
+B20 \code{ok} (its copy has a \code{.m} fallback); in MATLAB expect 21--22 (B21 depends on your path) and 17/17
+prototype checks.
+\item B02: \code{H(end,end)} in MATLAB (expected identical to Octave: the default \code{end} sees a $1\times1$
+object).
+\item B14: what \code{hss(sparse A)} does in MATLAB.
+\item B10: which warning MATLAB's triangular solve gives for the singular example (Octave: the generic
+\code{Octave:singular-matrix}).
+\item D2: whether MATLAB accepts a \code{size} method next to the \code{size} property.
+\item Timing of \code{hssp\_matvec} vs \code{H*x} (printed by \code{hss\_proto\_check}); this decides how urgent
+Phase~5 is.
+\end{enumerate}
+
+\end{document}

@@ -1,0 +1,101 @@
+% ======================================================================
+\section{Numerical Experiments}\label{sec:numerics}
+
+\subsection{Protocol}\label{subsec:protocol}
+\paragraph{Implementations.} Three implementations.
+\begin{enumerate}[leftmargin=1.5em,itemsep=1pt]
+\item \textbf{The repo's MATLAB solver} (\texttt{H\textbackslash b} $\to$ \texttt{hss\_ulvminnormsolve.m}), current
+and legacy. No MATLAB licence was available in this environment. Both files were therefore executed
+\emph{unmodified} under GNU Octave~8.4. The only compatibility shims are a stand-in for
+MATLAB's \texttt{dictionary} (used by \texttt{hss\_matvec}) and an Octave-parsable copy of the
+constructor's \texttt{arguments} block. Octave run times are not representative, so these runs are
+used for correctness only (Section~\ref{subsec:xval}).
+\item \textbf{A Python reference implementation} (\texttt{python\_reference/hssmn}), a port that performs
+the same operations as the current MATLAB solver: identical LQ/QL conventions, economic size-reduction QR
+(Section~\ref{sec:complexity}), decoupling, RHS update \eqref{eq:bbar} (all leaves' forced unknowns),
+discard/merge, the relaxed width of Proposition~\ref{prop:noassump}, the factored root solve and a
+factor/solve split. Two options reproduce the legacy file: \texttt{root='pinv'} forms the pseudo-inverse
+explicitly (Section~\ref{subsec:stab}), and \texttt{slack='collapse'} merges levels as the legacy code does
+(Section~\ref{subsec:sweeps}). All figures in this section come from it, at sizes the Octave runs cannot
+reach.
+\item \textbf{A MATLAB test suite} (\texttt{hss\_examples/minnorm\_paper}), which reruns every
+experiment with the repo solver. \texttt{run\_minnorm\_suite} regenerates all tables and figures on a
+MATLAB machine. Under Octave it runs end to end in quick mode (all experiments at small sizes, every
+figure); the full-size runs and all timings in this memo come from the Python port.
+\end{enumerate}
+The Python port agrees with both MATLAB files to within $\kappa(H)u$ ($\le5.2\times10^{-14}$) on identical
+matrices (Table~\ref{tab:xval}). The figures therefore describe the algorithm the repo implements,
+not a different one. Where the legacy file behaves differently (the root solve, the level merges), the
+port's two legacy options measure it.
+
+\paragraph{Timing.} Single-threaded BLAS (\texttt{OPENBLAS\_NUM\_THREADS=1}) on a 2-vCPU Linux VM
+(x86-64, Python 3.11, NumPy 2.4, SciPy 1.17). The reported time is the median of 5 runs (3 for $n\ge2^{17}$)
+after one warm-up. Python's per-node overhead dominates for small leaves, so absolute times
+favour large leaves. The \emph{slopes} are the quantity of interest.
+
+\paragraph{Error measures.} With $x$ the computed solution:
+\begin{itemize}[leftmargin=1.5em,itemsep=1pt]
+\item residual $\|Hx-b\|/\|b\|$ (HSS product);
+\item \emph{solver error} $\|x-x_{\rm ref}\|/\|x_{\rm ref}\|$, with $x_{\rm ref}$ the backward-stable
+dense min-norm solution of the \emph{HSS matrix itself} (QR of $H^*$), so compression error is
+excluded;
+\item end-to-end error against the original matrix $A$ (adds compression);
+\item null-space fraction $\|P_{\mathcal N(H)}x\|/\|x\|$, which is $0$ for an exact min-norm solution;
+\item \emph{manufactured} solutions for large $n$, where no dense matrix may be formed: draw $z$,
+set $x_\star=H^*z$ and $b=Hx_\star$. Since $x_\star\in\operatorname{Range}(H^*)$ and $Hx_\star=b$,
+$x_\star$ \emph{is} $H^+b$. Then $\|x-x_\star\|/\|x_\star\|$ measures the solver alone, using only
+$O(n)$ HSS products.
+\end{itemize}
+The stability study (Section~\ref{subsec:stab}) uses a 60-digit reference (\texttt{mpmath}) and the
+normwise backward error $\|b-Hx\|/(\|H\|_2\|x\|+\|b\|)$.
+
+\subsection{Test matrices}\label{subsec:testmatrices}
+Table~\ref{tab:families} lists every family exactly enough to regenerate it. The MATLAB
+generators carry the same names (\texttt{lib/mp\_gen\_*}, \texttt{lib/mp\_kernel\_*}).
+Three ways of building the HSS form are used, and the large-$n$ experiments never form a dense
+matrix:
+\begin{itemize}[leftmargin=1.5em,itemsep=1pt]
+\item \emph{generator form} (F1, F2): $D,U,V,R,W,B$ drawn directly; exact HSS; $O(nk)$ memory;
+\item \emph{constructor rule} (\texttt{mode='full'}): nested IDs of whole block rows/columns, as
+\texttt{hss\_constructor.m} does. This needs $O(mn)$ entry evaluations: even with a function
+handle (showcase Parts 9--10) it is quadratic in time, though not in memory;
+\item \emph{proxy build} (F3--F6, \texttt{mp\_hss\_kernel} / \texttt{hss\_build}): the near field is
+explicit (full columns at the leaves, the level-$(l{+}1)$ skeletons of near clusters above);
+interactions beyond $3r$ (cluster radius $r$) are replaced by 96 proxy points on a circle of
+radius $2r$, which is valid for $1/(x-y)$ kernels by Cauchy's integral formula~\cite{mr}. Banded kernels (F4)
+have no far field. $O(n)$ entry evaluations: $n\approx5\times10^5$ Cauchy columns build in 26\,s.
+\end{itemize}
+All IDs use column-pivoted QR with the constructor's rank rule $|R_{jj}|\ge\mathrm{tol}\,|R_{11}|$,
+deterministically. (\texttt{inter\_decompv3}'s threshold mode sketches with $\min(k_0,50)+10$
+rows, so it cannot return a rank above 60, or 120 after its retry. That is a silent cap worth
+knowing for high-rank tests.)
+
+\begin{table}[!htb]
+\centering\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}l>{\raggedright\arraybackslash}p{6.3cm}>{\raggedright\arraybackslash}p{3.4cm}>{\raggedright\arraybackslash}p{1.9cm}>{\raggedright\arraybackslash}p{2.4cm}@{}}
+\toprule
+& definition & HSS form & $\kappa$ (moderate $n$) & role\\
+\midrule
+F1 & \textbf{LR + block diagonal} (\texttt{rectsampler} of the showcase): $A=XY+\operatorname{blkdiag}(E_\tau)$, $X\in\mathbb{R}^{m\times k}$, $Y\in\mathbb{R}^{k\times n}$, $E_\tau\in\mathbb{R}^{n_\tau\times p_\tau}$, all entries iid $U[0,1]$; $k=3$, blocksize 16 & exact, rank $k$ at every level ($U_\tau=X(I_\tau,:)$, $V_\tau=Y(:,J_\tau)^T$, $R=W=[I;I]$, $B=I$) & $10^{3}$--$10^{4}$, grows $\propto n$ & baseline, matches showcase Parts 1--5\\
+F2 & \textbf{random HSS}: $D_\tau$ iid $N(0,1)/\sqrt{p_\tau}$; $U,V,R,W$ orthonormal (QR of Gaussians); $B$ iid $N(0,1)/\sqrt k$; real or complex & exact, rank $k$ (default 10) & $\approx10$--$10^2$ & generic scaling; with column grading $10^{-\alpha u_j}$ for the stability study\\
+F3 & \textbf{interlaced Cauchy} $A_{ij}=1/(x_i-y_j)$, $x_i=i$ ($i\le M$), three $y$'s per gap at $x_i+q/4$; $n=3(M-1)$ & numerical, tol $10^{-9}$--$10^{-10}$, ranks 26--42 & $\approx1.9$ & natural kernel, showcase Parts 6--10\\
+F4 & \textbf{decimated convolution} $y_i=\sum_jg(si+w-j)x_j$, $g$ Gaussian ($\sigma=2,3$) or Ricker ($\sigma=3$), truncated at $|d|\le w=\lceil4\sigma\rceil$; stride $s=2,3$; ``valid'' outputs only & exact (banded), ranks 10--15 & $10^2$--$10^8$ (grows with $\sigma$) & deconvolution / seismic wavelet, ill-conditioned\\
+F5 & \textbf{NUDFT Cauchy-like} $C=AF^*$, $A_{jk}=e^{2\pi ikx_j}$, $k=-N/2..N/2{-}1$, jittered $x_j$; $C_{jl}=D_N(x_j-l/N)/\sqrt N$ (Dirichlet kernel) $=a_jb_l/(z_j-w_l)$ on the unit circle; complex & numerical, tol $10^{-10}$--$10^{-12}$, ranks 28--50 & $\approx2$ & band-limited interpolation, MRI/seismic\\
+F6 & \textbf{Toeplitz$\to$Cauchy-like}: random Toeplitz $T\in\mathbb{R}^{m\times 2m}$, $C=F_mTD^*F_n^*$ (unitary, displacement rank 2), nodes $e^{-2\pi ij/m}$ and $e^{i\pi/n}e^{-2\pi il/n}$ & numerical, tol $10^{-12}$; $T$ itself is not compressible & $\approx10$ & repo paradigm (Toeplitz via Cauchy-like)\\
+\bottomrule
+\end{tabular}
+\caption{Test families. All are wide ($m<n$) and of full row rank. Generator scripts: Python
+\texttt{hssmn.build}/\texttt{hssmn.families}, MATLAB \texttt{lib/mp\_gen\_lrbd}, \texttt{mp\_gen\_random},
+\texttt{mp\_kernel\_cauchy}, \texttt{mp\_kernel\_conv}, \texttt{mp\_kernel\_nudft}, \texttt{mp\_kernel\_toeplitz}.}
+\label{tab:families}
+\end{table}
+
+\paragraph{Notes on the families.}
+F1 reproduces the showcase's matrix in generator form, so it scales to $n=2^{20}$ without the dense
+$XY$. Its rank-$k$ part has all-positive entries, which makes $\sigma_{\max}\approx\frac k4\sqrt{mn}$, so
+$\kappa$ grows linearly in $n$; the manufactured error grows accordingly (Figure~\ref{fig:largescale}).
+F2 is the clean generic case: fixed rank, $\kappa\approx10$, real or complex. F3 is the showcase's
+natural kernel; interlacing keeps $\kappa\approx2$ at every size. F4--F6 come from the application
+list (Section~\ref{sec:applications}). F4 is \emph{exactly} banded, hence exactly HSS, and is the
+only family whose conditioning is controlled by a physical parameter (the blur width).

@@ -1,0 +1,16 @@
+\begin{tabular}{@{}lrrcccccc@{}}
+\toprule
+matrix & $m\times n$ & $L$ & As.~\ref{as:slack} & residual & current vs.\ Python & legacy vs.\ Python & weighted & Tikhonov\\
+\midrule
+F1\_lrbd\_2048x4096 & 2048$\times$4096 & 7 & yes & $1.6{\times}10^{-14}$ & $4.0{\times}10^{-15}$ & $4.0{\times}10^{-15}$ & -- & --\\
+F2\_aspect0.95\_k16 & 1945$\times$2048 & 4 & no & $5.0{\times}10^{-15}$ & $6.2{\times}10^{-15}$ & $7.8{\times}10^{-15}$ & -- & --\\
+F2\_complex\_1024x2048 & 1024$\times$2048 & 5 & yes & $1.3{\times}10^{-15}$ & $1.1{\times}10^{-15}$ & $1.1{\times}10^{-15}$ & -- & $1.2{\times}10^{-15}$\\
+F2\_random\_1024x2048 & 1024$\times$2048 & 5 & yes & $1.1{\times}10^{-15}$ & $9.3{\times}10^{-16}$ & $9.4{\times}10^{-16}$ & $9.3{\times}10^{-15}$ & $9.5{\times}10^{-16}$\\
+F2\_square\_1024 & 1024$\times$1024 & 5 & no & $3.5{\times}10^{-14}$ & $3.6{\times}10^{-14}$ & -- & -- & $1.1{\times}10^{-15}$\\
+F2\_tall\_2048x1024 & 2048$\times$1024 & 5 & no & -- & -- & -- & -- & $8.2{\times}10^{-15}$\\
+F3\_cauchy\_1024x3069 & 1024$\times$3069 & 5 & yes & $9.5{\times}10^{-16}$ & $1.4{\times}10^{-15}$ & $1.4{\times}10^{-15}$ & $2.7{\times}10^{-15}$ & --\\
+F4\_ricker\_2036x4096 & 2036$\times$4096 & 5 & yes & $6.9{\times}10^{-14}$ & $5.2{\times}10^{-14}$ & $5.2{\times}10^{-14}$ & -- & $4.2{\times}10^{-14}$\\
+F5\_nudft\_1536x2048 & 1536$\times$2048 & 5 & no & $1.2{\times}10^{-15}$ & $2.1{\times}10^{-15}$ & $2.3{\times}10^{-15}$ & -- & --\\
+F6\_toeplitz\_1024x2048 & 1024$\times$2048 & 5 & no & $2.3{\times}10^{-15}$ & $3.5{\times}10^{-15}$ & $3.3{\times}10^{-15}$ & -- & --\\
+\bottomrule
+\end{tabular}

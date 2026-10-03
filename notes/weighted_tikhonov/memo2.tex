@@ -1,0 +1,123 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage[margin=1in]{geometry}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{booktabs,tabularx,array}
+\usepackage{enumitem}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage{microtype}
+\usepackage[section]{placeins}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+\usepackage{xr-hyper}
+% Build: compile ../minnorm_v2/memo1.tex twice first; this file reads its .aux for the M1-
+% cross-references. Links to M1 point at HSS_Min_Norm_Solve_Memo_v2.pdf next to this PDF.
+\externaldocument[M1-]{../minnorm_v2/memo1}[HSS_Min_Norm_Solve_Memo_v2.pdf]
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\title{Weighted Minimum-Norm and Tikhonov Extensions\\ of the Recursive HSS Solver}
+\author{Arjun Sethi-Olowin}
+\date{October 1, 2026}
+
+\begin{document}
+\maketitle
+
+\section{Summary}
+Both extensions reduce \emph{exactly} to the unweighted minimum-norm solver of the companion memo
+M1~\cite{memo1}. No new factorization is needed, and the repo's \texttt{H\textbackslash b} is called unchanged.
+\begin{itemize}[leftmargin=1.4em,itemsep=1pt]
+\item \textbf{Weighted minimum norm}, $\min\|Lx\|$ s.t.\ $Hx=b$, with $L$ diagonal or block diagonal
+conforming to the leaves. With $y=Lx$, $HL^{-1}$ is HSS on the same tree with only $D_\tau$ and $V_\tau$
+changed (Lemma~\ref{lem:Wstruct}). Every step of the solver then either preserves $\|L\cdot\|$ or
+removes directions that only add to it (Theorem~\ref{thm:W}, Table~\ref{tab:Wchain}).
+\item \textbf{Tikhonov}, $\min\|S(Hx-b)\|^2+\lambda^2\|Lx\|^2$, for \emph{any} shape of $H$. Augmenting to
+$[H,\ \lambda I]$ turns it into a minimum-norm problem (Lemma~\ref{lem:aug}). With the identity
+columns interleaved leaf by leaf, the augmented matrix is HSS on the same tree. It always has full
+row rank and always satisfies the slack assumption (Lemma~\ref{lem:augstruct}), and every step of
+the solver preserves Tikhonov optimality (Theorem~\ref{thm:T}, Table~\ref{tab:Tchain}).
+\item \textbf{Numerics}: accuracy at the conditioning of the weighted or augmented problem, at
+every $\lambda$ and for 12 decades of weight range. Cost linear in $n$ up to $n=2^{19}$, at
+$0.9$--$1.25\times$ the price of one min-norm solve.
+\item \textbf{Applications} from the list: basis pursuit by IRLS (whose inner loop is exactly the
+weighted problem) and by Douglas--Rachford (repeated projections), Tikhonov deblurring with
+$\lambda$ selection, and $k$-space-weighted non-Cartesian MRI. Spectral (MWNI) and image-domain weights are
+not leaf-diagonal and are left open (Section~\ref{subsec:notdiag}).
+\end{itemize}
+
+\input{sec_theory.tex}
+
+\subsection{Algorithms}
+\begin{algorithm}[!htb]
+\caption{Weighted minimum norm and Tikhonov through $\mathcal M$}
+\label{alg:WT}
+\begin{algorithmic}[1]
+\Function{WeightedMinNorm}{$H,b,L$}\Comment{\texttt{minnorm(H,b,'Weight',L)}}
+  \State $D_\tau\gets D_\tau L_\tau^{-1}$, \ $V_\tau\gets L_\tau^{-*}V_\tau$ for every leaf \Comment{$H_L=HL^{-1}$, $O(nr)$}
+  \State \Return $L^{-1}\mathcal M(H_L,b)$
+\EndFunction
+\Function{Tikhonov}{$H,b,\lambda,S,L$}\Comment{\texttt{tikhonov}}
+  \State $D_\tau\gets S_\tau D_\tau L_\tau^{-1}$, $U_\tau\gets S_\tau U_\tau$, $V_\tau\gets L_\tau^{-*}V_\tau$; \ $\tilde b=Sb$ \Comment{general $\to$ standard form}
+  \State $D_\tau\gets[D_\tau,\ \lambda I_{n_\tau}]$, \ $V_\tau\gets[V_\tau;\,0]$ for every leaf \Comment{augment + interleave}
+  \State $z\gets\mathcal M(H_a,\tilde b)$; \ $y\gets z_{x\text{-part}}$; \ $r\gets-\lambda z_{s\text{-part}}$ \Comment{$r=S(Hx-b)$}
+  \State \Return $x=L^{-1}y$, $r$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\input{sec_numerics.tex}
+
+\section{Open Items}\label{sec:open2}
+\begin{enumerate}[leftmargin=1.5em,itemsep=2pt]
+\item \textbf{Factor/solve split}: done. $H$ keeps its factors after the first solve, and \texttt{minnorm} and
+\texttt{tikhonov} keep theirs for the last weight and the last $(\lambda,L,S)$ (M1, Sec.~\ref{M1-sec:open}). Douglas--Rachford
+and ADMM need many solves with one matrix, and with stored factors a solve is $\approx24\times$ cheaper than
+a factorization in the basis-pursuit test (Section~\ref{subsec:bp}) and $4$--$16\times$ at the sizes of M1,
+Table~\ref{M1-tab:scaling}. A Tikhonov $\lambda$ sweep still needs a new factorization per $\lambda$.
+A factorization that reuses the $\lambda$-independent parts (the $U$-compressions are the same
+for every $\lambda$) would cut that, and is worth working out.
+\item \textbf{HSS weights.} Circulant or smoothing weights (MWNI, image-domain sparsity) need $L$ itself
+HSS, and with it HSS inversion and products (Remark~\ref{rem:nonconform}).
+\item \textbf{General-form Tikhonov with a difference operator} ($L$ a non-square
+$(n-1)\times n$ first difference) is not covered by the substitution. It needs the
+$A$-weighted pseudo-inverse (Eld\'en's standard-form transformation) or a stacked formulation
+with an extra block row.
+\item \textbf{Geometric tree} for variable-density sampling (rank 135 against 36 here; M1,
+Sec.~\ref{M1-sec:open}).
+\end{enumerate}
+
+\appendix
+\section{Code}
+\sloppy
+MATLAB methods of \texttt{@hss}: \texttt{x = minnorm(H,b,'Weight',L)} and
+\texttt{[x,r] = tikhonov(H,b,lambda,'Weight',L,'DataWeight',S)}, where $L$ and $S$ are vectors (diagonal)
+or cell arrays of leaf blocks; omitted means identity. Both keep their factors with $H$ (a repeat call with
+the same weights and $\lambda$ only solves). Generator edits in \texttt{@hss/private/}: \texttt{hss\_to\_gen},
+\texttt{hss\_from\_gen}, \texttt{hss\_gen\_weight} (leaf blocks applied by solves, never by \texttt{inv}),
+\texttt{hss\_gen\_augment}. The suite's \texttt{mp\_weighted\_minnorm} and \texttt{mp\_tikhonov} are thin
+wrappers. Tests: \texttt{mp\_selftest}, \texttt{mp\_test\_solver} and \texttt{test\_hss.m} (leaf-block weights
+against dense formulas), \texttt{mp\_exp\_weighted\_tikhonov}, \texttt{mp\_exp\_apps2}. Python: \texttt{hssmn.variants}
+(\texttt{weighted\_minnorm}, \texttt{tikhonov}, \texttt{augment}); experiments \texttt{exp\_w\_t.py},
+\texttt{exp\_apps2.py}; figures \texttt{fig\_memo2.py}.
+
+\begin{thebibliography}{9}\small
+\bibitem{memo1} A.~Sethi-Olowin, \emph{The recursive complete minimum-norm HSS solver: proofs,
+numerical experiments, and applications}, memo, October 2026 (cited as M1).
+\bibitem{ddfg} I.~Daubechies, R.~DeVore, M.~Fornasier, C.~S.~G\"unt\"urk, Iteratively reweighted least
+squares minimization for sparse recovery, \emph{Comm. Pure Appl. Math.} 63 (2010).
+\bibitem{lsqr} C.~C.~Paige, M.~A.~Saunders, LSQR: an algorithm for sparse linear equations and sparse
+least squares, \emph{ACM TOMS} 8 (1982).
+\bibitem{mwni} B.~Liu, M.~D.~Sacchi, Minimum weighted norm interpolation of seismic records,
+\emph{Geophysics} 69 (2004).
+\bibitem{elden} L.~Eld\'en, A weighted pseudoinverse, generalized singular values, and constrained
+least squares problems, \emph{BIT} 22 (1982).
+\bibitem{hansen} P.~C.~Hansen, \emph{Rank-Deficient and Discrete Ill-Posed Problems}, SIAM, 1998.
+\bibitem{hanke} M.~Hanke, Limitations of the L-curve method in ill-posed problems, \emph{BIT} 36 (1996).
+\end{thebibliography}
+\end{document}

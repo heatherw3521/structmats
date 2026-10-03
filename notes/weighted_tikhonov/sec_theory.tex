@@ -1,0 +1,254 @@
+% ======================================================================
+\section{Problems and Standing Notation}\label{sec:problems}
+
+Notation is that of the companion memo~\cite{memo1} (cited as M1): $H\in\mathbb{C}^{m\times n}$ is HSS on a
+tree $\mathcal T$; a leaf $\tau$ has $n_\tau$ rows, $p_\tau$ columns, generators
+$D_\tau,U_\tau,V_\tau$, and the non-leaf generators are $R,W,B$. Write
+$\mathcal M(H,b):=H^+b$ for the output of the recursive minimum-norm solver, which M1
+(Thm.~\ref{M1-thm:general}) proves exact for every full-row-rank HSS matrix with proper ranks
+(M1, Assumption~\ref{M1-as:ranks}). In this memo $L$ denotes the weight, not the tree depth. We treat
+\begin{align}
+\text{(W)}\quad & x_W=\operatorname*{arg\,min}_{Hx=b}\|Lx\|_2, && H \text{ wide, full row rank},\label{eq:W}\\
+\text{(T)}\quad & x_\lambda=\operatorname*{arg\,min}_{x}\ \|S(Hx-b)\|_2^2+\lambda^2\|Lx\|_2^2, && \lambda>0,\ H\text{ of any shape},\label{eq:T}
+\end{align}
+with weights that are \emph{diagonal or block diagonal conforming to the leaves}:
+\[
+L=\operatorname{diag}(L_\tau)_{\tau\ \text{leaf}},\quad L_\tau\in\mathbb{C}^{p_\tau\times p_\tau}\ \text{invertible};\qquad
+S=\operatorname{diag}(S_\tau),\quad S_\tau\in\mathbb{C}^{n_\tau\times n_\tau}.
+\]
+The diagonal case $L=\operatorname{diag}(w)$, $w_j\neq0$, is the one used by IRLS and by
+prior-weighted reconstructions. Note $\|Lx\|^2=x^*Mx$ with $M=L^*L$ SPD, so (W) is the familiar
+$x_W=M^{-1}H^*(HM^{-1}H^*)^{-1}b$.
+
+Two facts from M1 are used repeatedly.
+\begin{itemize}[leftmargin=1.4em,itemsep=1pt]
+\item[(F1)] (M1, Lemma~\ref{M1-lem:blockrow}) A leaf's block column is $H(:,J_\tau)=\big[\,F_\tau V_\tau^*\ \text{(other rows)};\ D_\tau\ \text{(own rows)}\big]$,
+and its block row is $\big[\,D_\tau,\ U_\tau G_\tau\,\big]$. Operations on a leaf's columns act on
+$(D_\tau,V_\tau)$ only, operations on its rows act on $(D_\tau,U_\tau)$ only.
+\item[(F2)] (M1, Lemmas~\ref{M1-lem:orthogonal}--\ref{M1-lem:rank}, Table~\ref{M1-tab:chain}) Each operation of the solver either is a unitary
+change of variables (feasible sets map onto each other, the norm is preserved) or removes variables
+that enter the norm additively and are free (size reduction) or fixed by the constraints (forced
+solve).
+\end{itemize}
+
+% ======================================================================
+\section{Weighted Minimum Norm}\label{sec:weighted}
+
+\begin{lemma}[change of variables]\label{lem:Wsub}
+With $y=Lx$: $x_W=L^{-1}y^\star$, where $y^\star=(HL^{-1})^+b$ is the minimum-norm solution of
+$(HL^{-1})y=b$.
+\end{lemma}
+\begin{proof}
+\emph{Map:} $x\mapsto y=Lx$ is a bijection of $\mathbb{C}^n$. \emph{Feasible sets:}
+$Hx=b\iff (HL^{-1})y=b$. \emph{Objective:} $\|Lx\|=\|y\|$. So (W) is the minimum-norm problem for
+$HL^{-1}$ in the variable $y$.
+\end{proof}
+
+\begin{lemma}[$HL^{-1}$ is HSS on the same tree]\label{lem:Wstruct}
+$H_L:=HL^{-1}$ has the same tree, ranks, and generators $U,R,W,B$ as $H$, with leaf generators
+\[
+D_\tau\ \to\ D_\tau L_\tau^{-1},\qquad V_\tau\ \to\ L_\tau^{-*}V_\tau .
+\]
+$H_L$ has full row rank, and it satisfies M1's Assumptions~\ref{M1-as:slack} and~\ref{M1-as:ranks} exactly when $H$ does.
+\end{lemma}
+\begin{proof}
+$L^{-1}$ is block diagonal on the leaf column blocks, so it multiplies each block column
+$H(:,J_\tau)$ on the right by $L_\tau^{-1}$. By (F1) that block column is $[F_\tau V_\tau^*;D_\tau]$, and
+$F_\tau V_\tau^*L_\tau^{-1}=F_\tau(L_\tau^{-*}V_\tau)^*$. Nothing else is touched. Right multiplication by an
+invertible matrix preserves the rank, and $n_\tau,p_\tau,\ell_\tau$ are unchanged.
+\end{proof}
+
+\begin{theorem}[weighted solver]\label{thm:W}
+For (W) with leaf-conforming $L$, the vector $x=L^{-1}\mathcal M(HL^{-1},b)$ is $x_W$. In the
+original variable, every operation of the solver either preserves the \emph{weighted} norm
+$\|L\,\cdot\,\|$ or removes directions that only add to it, as in Table~\ref{tab:Wchain}.
+\end{theorem}
+\begin{proof}
+By Lemma~\ref{lem:Wstruct}, $H_L$ is a full-row-rank HSS matrix, so M1 Thm.~\ref{M1-thm:general} gives
+$\mathcal M(H_L,b)=y^\star$, and Lemma~\ref{lem:Wsub} gives $x_W=L^{-1}y^\star$.
+
+For the step-by-step statement, run M1's chain (P0)--(P3) on $H_L$ in the variable $y$ and pull
+each change of variables back to $x=L^{-1}y$. Since $L^{-1}$ acts leaf by leaf:
+\begin{itemize}[leftmargin=1.4em,itemsep=2pt]
+\item \textbf{Size reduction} on $H_L$: $[V_\tau^*L_\tau^{-1};D_\tau L_\tau^{-1}]\Omega_\tau=[\tilde V_\tau^*,0;\tilde D_\tau,0]$.
+In $x$: $x_\tau=L_\tau^{-1}\Omega_\tau[\tilde y_\tau;w_\tau]$, so
+$\|Lx\|^2=\sum_\tau\|\tilde y_\tau\|^2+\|w_\tau\|^2$. The discarded $w_\tau$ do not affect $Hx$, so the
+optimum sets them to zero (M1 Lemma~\ref{M1-lem:orthogonal}). These are exactly the directions in which moving $x$
+costs weighted norm and buys nothing.
+\item \textbf{Row compression} $P_\tau^*$ is unchanged: it acts on rows (on $U_\tau$, $D_\tau$, $b$),
+and $L$ acts on columns, so the two commute. It does not change the feasible set.
+\item \textbf{Column decoupling} on $H_L$: $\tilde y_\tau=Q_\tau\hat y_\tau$. In $x$:
+$x_\tau=L_\tau^{-1}\Omega_\tau[Q_\tau\hat y_\tau;0]$, and $\|Lx\|=\|\hat y\|$. This map is an isometry
+from $(\hat y,\|\cdot\|)$ to $(x,\|L\,\cdot\|)$.
+\item \textbf{Forced solve}: $X^{(1)}=\mathbf L^{-1}\hat b_1$ is the same for every feasible point, so it
+contributes the constant $\|X^{(1)}\|^2$ to $\|Lx\|^2$ (M1 Lemma~\ref{M1-lem:forced}). Nonsingularity of the
+triangular blocks follows from full row rank of $H_L$ (M1 Lemma~\ref{M1-lem:rank}).
+\item \textbf{Recursion}: the reduced matrix $\bar H_L$ is HSS with one level fewer, has full row rank
+and proper ranks (M1 Lemma~\ref{M1-lem:rank}, Sec.~\ref{M1-subsec:merge}). Induct.
+\end{itemize}
+Composing the maps gives $x=L^{-1}y^\star=x_W$.
+\end{proof}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+operation (on $H_L=HL^{-1}$) & map back to $x$ & invariant\\
+\midrule
+weight change & $x=L^{-1}y$ & $\|Lx\|=\|y\|$, \ $Hx=b\iff H_Ly=b$\\
+size reduction & $x_\tau=L_\tau^{-1}\Omega_\tau[\tilde y_\tau;w_\tau]$ & $\|Lx\|^2=\|\tilde y\|^2+\|w\|^2\Rightarrow w=0$\\
+row compression & rows $\times P_\tau^*$ & feasible set unchanged\\
+column decoupling & $x_\tau=L_\tau^{-1}\Omega_\tau[Q_\tau\hat y_\tau;0]$ & $\|Lx\|=\|\hat y\|$\\
+forced solve & $\hat y=[X^{(1)};X^{(2)}]$, $X^{(1)}$ fixed & $\|Lx\|^2=c+\|X^{(2)}\|^2$\\
+recursion / reconstruction & as in M1 & M1 Thm.~\ref{M1-thm:general}\\
+\bottomrule
+\end{tabular}
+\caption{Weighted version of M1's Table~\ref{M1-tab:chain}: each step preserves $\|L\,\cdot\|$ or removes
+directions that only add to it.}
+\label{tab:Wchain}
+\end{table}
+
+\begin{remark}[cost and implementation]
+Forming $H_L$ touches only the leaf generators: $O(\sum_\tau p_\tau(n_\tau+\ell_\tau))=O(n\,r)$ work
+for diagonal $L$, and $O(\sum_\tau p_\tau^3)$ for dense leaf blocks. The solve costs the same as for
+$H$. In MATLAB: \texttt{minnorm(H,b,'Weight',w)} or \texttt{minnorm(H,b,'Weight',\{L\_1,\dots,L\_q\})},
+which forms $H_L$ by editing the leaf generators ($D_\tau L_\tau^{-1}$ and $L_\tau^{-*}V_\tau$, by solves) and calls
+M1's solver unchanged. In Python: \texttt{hssmn.weighted\_minnorm}.
+\end{remark}
+
+\begin{remark}[weights that are \emph{not} leaf-conforming]\label{rem:nonconform}
+If $L$ couples columns of different leaves, then $HL^{-1}$ is no longer obtained by editing leaf
+generators. Examples: a circulant or Toeplitz smoothing operator, or a weight that is diagonal
+in a \emph{different} basis. Two practical cases from the application list are of this type:
+spectral weights in seismic minimum weighted norm interpolation (MWNI~\cite{mwni}) and image-domain weights
+in non-Cartesian MRI (Sec.~\ref{sec:apps}). When $L$ is itself HSS, $HL^{-1}$ is HSS of somewhat
+higher rank, but forming it needs HSS inversion and HSS$\times$HSS products. The repo does not
+have those yet, and this memo does not treat that case.
+\end{remark}
+
+% ======================================================================
+\section{Tikhonov Regularization}\label{sec:tikhonov}
+
+\subsection{Standard form via an augmented minimum-norm problem}
+
+\begin{lemma}[augmentation]\label{lem:aug}
+For $\lambda>0$ and any $H\in\mathbb{C}^{m\times n}$, let $[x^\star;s^\star]$ be the minimum-norm solution of
+\begin{equation}\label{eq:aug}
+\begin{bmatrix}H & \lambda I_m\end{bmatrix}\begin{bmatrix}x\\ s\end{bmatrix}=b .
+\end{equation}
+Then $x^\star=x_\lambda:=\operatorname*{arg\,min}_x\|Hx-b\|^2+\lambda^2\|x\|^2$, and $s^\star=(b-Hx_\lambda)/\lambda$.
+\end{lemma}
+\begin{proof}
+\emph{Map:} for every $x\in\mathbb{C}^n$ there is exactly one $s$ with $(x,s)$ feasible, namely
+$s=(b-Hx)/\lambda$. So $x\mapsto(x,(b-Hx)/\lambda)$ is a bijection from $\mathbb{C}^n$ onto the feasible set.
+\emph{Objective:} on the feasible set,
+$\|[x;s]\|^2=\|x\|^2+\lambda^{-2}\|b-Hx\|^2=\lambda^{-2}\big(\|Hx-b\|^2+\lambda^2\|x\|^2\big)$.
+So the two minimizations are the same problem. Both have unique minimizers: the Tikhonov
+functional is strictly convex, and \eqref{eq:aug} has full row rank.
+\end{proof}
+The closed form agrees: the minimum-norm solution of \eqref{eq:aug} is
+$[H^*;\lambda I](HH^*+\lambda^2I)^{-1}b$, so $x_\lambda=H^*(HH^*+\lambda^2I)^{-1}b=(H^*H+\lambda^2I)^{-1}H^*b$.
+This augmented formulation is classical (it is the ``damped'' problem of LSQR~\cite{lsqr}; see also~\cite{hansen}). The new point is
+that it \emph{stays HSS on the same tree}, so M1's solver applies unchanged:
+
+\begin{lemma}[the augmented matrix is HSS on the same tree]\label{lem:augstruct}
+Order the unknowns leaf by leaf as $(x_{J_\tau},s_{I_\tau})_\tau$, i.e.\ apply the column permutation
+$\Pi$ that puts the $n_\tau$ identity columns belonging to leaf $\tau$'s rows right after $\tau$'s
+own columns. Then $H_a:=[H,\lambda I]\Pi$ is HSS on $\mathcal T$ with the same $U,R,W,B$ and
+\[
+D_\tau^{a}=\begin{bmatrix}D_\tau & \lambda I_{n_\tau}\end{bmatrix}\in\mathbb{C}^{n_\tau\times(p_\tau+n_\tau)},\qquad
+V_\tau^{a}=\begin{bmatrix}V_\tau\\ 0_{n_\tau\times\ell_\tau}\end{bmatrix}.
+\]
+Moreover: (i) $H_a$ has full row rank for every $\lambda>0$ and every shape of $H$, including square
+and tall; (ii) Assumption~\ref{M1-as:slack} of M1 holds at every leaf as soon as $\ell_\tau\le p_\tau$
+($\ell_\tau+n_\tau\le p_\tau+n_\tau$), so even the legacy MATLAB file, which merges levels when the slack
+is short, never collapses the leaf level of $H_a$ (the current solver never merges); (iii) $\Pi$ is a permutation, so it maps minimum-norm solutions to minimum-norm solutions.
+\end{lemma}
+\begin{proof}
+The diagonal block of leaf $\tau$ in $H_a$ is $[H(I_\tau,J_\tau),\ \lambda I(I_\tau,I_\tau)]=[D_\tau,\lambda I]$.
+An off-diagonal block between siblings $\alpha,\beta$ has columns $J_\beta$ of $H$ together with the identity
+columns of $I_\beta$. Since $I_\alpha\cap I_\beta=\emptyset$, the identity contributes $0$, so the block is
+$[\mathbf U_\alpha B_{\alpha\beta}\mathbf V_\beta^*,\ 0]=\mathbf U_\alpha B_{\alpha\beta}[\mathbf V_\beta^*,0]$. With
+the leafwise interleaving, the zero columns sit under each leaf, which is $V_\tau^a=[V_\tau;0]$ with the
+same $W$ above. (i): the columns of $\lambda I$ alone have rank $m$. (ii): direct. (iii): a permutation is
+unitary (M1 Lemma~\ref{M1-lem:twosided} with $P=I$).
+\end{proof}
+
+\begin{theorem}[Tikhonov solver]\label{thm:T}
+For $\lambda>0$ and any HSS matrix $H$ with proper ranks, $x_\lambda=\big[\Pi\,\mathcal M(H_a,b)\big]_{x\text{-part}}$.
+In terms of the Tikhonov functional $J_\lambda(x)=\|Hx-b\|^2+\lambda^2\|x\|^2$, every operation of
+the solver applied to $H_a$ preserves $J_\lambda$-optimality, as in Table~\ref{tab:Tchain}.
+\end{theorem}
+\begin{proof}
+By Lemma~\ref{lem:augstruct}, $H_a$ is HSS with full row rank, so M1 Thm.~\ref{M1-thm:general} gives
+$\mathcal M(H_a,b)=H_a^+b$. Undoing $\Pi$ gives the minimum-norm solution of \eqref{eq:aug}, and
+Lemma~\ref{lem:aug} identifies its $x$-part with $x_\lambda$.
+
+Step by step, with $z=(x,s)$ and $J_\lambda(x)=\lambda^2\|z\|^2$ on the feasible set (Lemma~\ref{lem:aug}):
+\begin{itemize}[leftmargin=1.4em,itemsep=2pt]
+\item \textbf{Size reduction} compresses the $(\ell_\tau+n_\tau)\times(p_\tau+n_\tau)$ stack
+$\left[\begin{smallmatrix}V_\tau^*&0\\D_\tau&\lambda I\end{smallmatrix}\right]$. It mixes $x_\tau$ and $s_\tau$
+(data-misfit and solution variables of the same leaf) by a unitary $\Omega_\tau$, and always
+discards $p_\tau-\ell_\tau$ columns, \emph{even when the leaf of $H$ is square or tall}. Along the
+discarded directions $z$ changes but $H_az$ does not, so $J_\lambda$ would only grow: set them to zero.
+\item \textbf{Row compression} acts on $U_\tau$, $D_\tau^a$ and $b_\tau$. It is the same $P_\tau$ as for $H$
+(the identity block becomes $\lambda P_\tau^*$, still part of $D_\tau^a$). It does not change the feasible set.
+\item \textbf{Column decoupling} is a unitary change of $z_\tau$, so it preserves $\|z\|$, hence $J_\lambda$.
+\item \textbf{Forced solve}: the forced unknowns are the same for every feasible $z$. They add a
+constant to $\|z\|^2$, i.e.\ to $J_\lambda/\lambda^2$. Nonsingularity: M1 Lemma~\ref{M1-lem:rank}, since $H_a$ has full
+row rank.
+\item \textbf{Recursion}: the reduced matrix has full row rank and one level fewer. Induct.
+\end{itemize}
+Each step is either a unitary change of $z$ or removes components of $z$ that are free or fixed and
+enter $\|z\|^2$ additively. Composed, the steps map the minimizer of the last problem to the minimizer
+of $J_\lambda$.
+\end{proof}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+operation & variable / map & invariant\\
+\midrule
+augmentation & $x\mapsto z=(x,(b-Hx)/\lambda)$ & $\lambda^2\|z\|^2=J_\lambda(x)$ on $\{H_az=b\}$\\
+interleave $\Pi$ & permutation of $z$ & $\|z\|$\\
+size reduction & $z_\tau=\Omega_\tau[\tilde z_\tau;w_\tau]$ & $\|z\|^2=\|\tilde z\|^2+\|w\|^2\Rightarrow w=0$\\
+row compression & rows $\times P_\tau^*$ & feasible set\\
+column decoupling & $\tilde z_\tau=Q_\tau\hat z_\tau$ & $\|z\|$\\
+forced solve & $\hat z=[Z^{(1)};Z^{(2)}]$, $Z^{(1)}$ fixed & $\|z\|^2=c+\|Z^{(2)}\|^2$\\
+recursion & as in M1 & M1 Thm.~\ref{M1-thm:general}\\
+\bottomrule
+\end{tabular}
+\caption{The chain behind Theorem~\ref{thm:T}.}
+\label{tab:Tchain}
+\end{table}
+
+\subsection{General form, data weights, limits}
+\begin{proposition}[general form]\label{prop:general}
+For (T) with leaf-conforming $S$ and invertible leaf-conforming $L$, put $\tilde H=SHL^{-1}$,
+$\tilde b=Sb$. Then $x_\lambda=L^{-1}\tilde y_\lambda$, where $\tilde y_\lambda$ is the standard-form
+Tikhonov solution for $(\tilde H,\tilde b)$. $\tilde H$ is HSS on the same tree with
+$D_\tau\to S_\tau D_\tau L_\tau^{-1}$, $U_\tau\to S_\tau U_\tau$, $V_\tau\to L_\tau^{-*}V_\tau$, so
+Theorem~\ref{thm:T} applies.
+\end{proposition}
+\begin{proof}
+With $y=Lx$ the objective is $\|\tilde H y-\tilde b\|^2+\lambda^2\|y\|^2$, a bijective change of
+variables. The structure follows from (F1) on rows and on columns, as in Lemma~\ref{lem:Wstruct}.
+\end{proof}
+$S$ may be singular: a 0/1 mask that drops corrupted data rows keeps $[\tilde H,\lambda I]$ at full row rank.
+\emph{Limits.} As $\lambda\to0$, $x_\lambda\to H^+b$: the minimum-norm solution for wide full-row-rank $H$,
+the least-squares solution for tall full-column-rank $H$. So the Tikhonov path connects to M1
+continuously. As $\lambda\to\infty$, $x_\lambda\approx\lambda^{-2}H^*b$.
+\emph{Conditioning.} $\kappa(H_a)^2=(\sigma_1^2+\lambda^2)/(\sigma_{\min}^2+\lambda^2)$ for wide or square $H$,
+and $(\sigma_1^2+\lambda^2)/\lambda^2$ for tall $H$. For wide and square $H$, regularization improves the
+conditioning of the problem the solver actually sees. For tall $H$, $\kappa(H_a)\to\infty$ as
+$\lambda\to0$ although $x_\lambda$ tends to the least-squares solution, whose conditioning is that of
+$H$; there $\kappa(H_a)u$ is a loose bound for the error in $x$ (Section~\ref{subsec:Tnum}).
+\emph{Cost.} Augmented leaves have $p_\tau+n_\tau$ columns, but the size reduction brings them back to
+$\ell_\tau+n_\tau$, the width a leaf of $H$ has after its own size reduction when its slack suffices. Only that first QR is
+larger, by at most the factor $1+n_\tau/p_\tau$; every later operation has the same sizes as for $H$.
+So a Tikhonov factorization costs little more than a minimum-norm one (measured: $1.0$--$1.25\times$).
+Each $\lambda$ needs a new factorization, since $D_\tau^a$ depends on $\lambda$. A $\lambda$ sweep of
+length $K$ costs $K$ factorizations, each linear in $n$.
+In MATLAB: \texttt{[x,r] = tikhonov(H,b,lambda,'Weight',L,'DataWeight',S)}, with $L$ and $S$ vectors or
+cells of leaf blocks. In Python: \texttt{hssmn.tikhonov}.

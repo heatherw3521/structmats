@@ -1,0 +1,18 @@
+Part 1: 40 x 60, blocksize=15, k=6  ->  levelcount = 1
+Part 1 (40x60, depth ~2-3)    residual=6.21e-15  errvsref=4.63e-15  ||x||=6.7504  ||x_minnorm||=6.7504  HSS=0.0851s  dense=0.0101s  PASS
+Part 2.1 (80x120, depth 2)    residual=5.09e-15  errvsref=4.83e-15  ||x||=10.0466  ||x_minnorm||=10.0466  HSS=0.0298s  dense=0.0004s  PASS
+Part 2.2 (160x240, depth 3)   residual=4.36e-15  errvsref=4.92e-15  ||x||=13.0080  ||x_minnorm||=13.0080  HSS=0.0736s  dense=0.0028s  PASS
+Part 2.3 (320x480, depth 4)   residual=4.34e-14  errvsref=1.16e-14  ||x||=17.1851  ||x_minnorm||=17.1851  HSS=0.1416s  dense=0.0086s  PASS
+     N      levelcount    HSS_solve_s    Dense_lsqminnorm_s     Residual     MinNormError    Pass 
+    ____    __________    ___________    __________________    __________    ____________    _____
+
+     128        2          0.025858          0.00049421        3.8617e-15     3.4485e-15     true 
+     256        3           0.07702           0.0013073        1.0019e-14     4.8724e-15     true 
+     512        4           0.15807           0.0062958         7.498e-15     4.7748e-15     true 
+    1024        5           0.38943            0.046184        1.2381e-14     8.0423e-15     true 
+    2048        6           0.46684             0.44984        4.2861e-14     1.6211e-14     true 
+    4096        7           0.30075              5.2025         2.406e-13     2.0552e-14     true 
+
+
+Part 3: 6 / 6 depth-controlled cases matched the true minimum-norm solution.
+N=  8192  levelcount= 8  HSS solve=1.132s  dense lsqminnorm=22.879s  residual=4.43e-13  errvsref=3.37e-13  PASS

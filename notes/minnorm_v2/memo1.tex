@@ -1,0 +1,109 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage[margin=1in]{geometry}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{booktabs,tabularx}
+\usepackage{enumitem}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage{microtype}
+\usepackage{array}
+\usepackage{upquote}
+\usepackage[section]{placeins}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\theoremstyle{plain}
+\newtheorem{assumption}{Assumption}
+
+\DeclareMathOperator{\Null}{Null}
+\DeclareMathOperator{\Range}{Range}
+
+\title{The Recursive Complete Minimum-Norm HSS Solver\\[2pt]
+\large algorithm, proof of optimality, and numerical experiments}
+\author{Arjun Sethi-Olowin}
+\date{October 2026}
+
+\input{tables/numbers.tex}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+These notes describe a direct, ULV-type algorithm that computes the minimum-norm solution
+$x^\star=H^+b$ of $Hx=b$, where $H$ is a wide (or square) hierarchically semiseparable (HSS) matrix of
+full row rank. The algorithm works one tree level at a time: unitary transformations decouple part of the
+unknowns of every leaf, those unknowns are solved for directly, and what remains is a smaller HSS system
+with one level fewer. We prove that the result is exactly $H^+b$ and that the cost is linear in $n$, and
+test the algorithm numerically.
+\begin{itemize}[leftmargin=1.4em,itemsep=1pt]
+\item Section~\ref{sec:setup}: notation and the one standing assumption on the representation.
+\item Section~\ref{sec:algorithm}: one level of the algorithm (size reduction, decoupling, forced solve,
+reduced matrix, reconstruction), and why the slack condition of the fixed-width formulation is not needed.
+\item Section~\ref{sec:proof}: proof that the algorithm returns $H^+b$: four lemmas, one level, all levels.
+\item Section~\ref{sec:complexity}: complexity, with measured times.
+\item Section~\ref{sec:summary}: the algorithm in pseudocode.
+\item Section~\ref{sec:numerics}: numerical experiments: test matrices, correctness against dense
+solutions, accuracy as the condition number grows, accuracy at large $n$.
+\item Section~\ref{sec:open}: open problems.
+\end{itemize}
+
+\input{sec_theory.tex}
+\input{sec_complexity.tex}
+
+% ======================================================================
+\section{Algorithm Summary}\label{sec:summary}
+\begin{algorithm}[h]
+\caption{Recursive Complete Minimum-Norm HSS Solve, $\mathcal M(H,b)$}
+\label{alg:minnorm}
+\begin{algorithmic}[1]
+\Require HSS matrix $H\in\mathbb{C}^{m\times n}$, $m\le n$, full row rank, proper representation; $b\in\mathbb{C}^m$
+\If{$H$ is a single dense block $D$}
+  \State \Return $D^+b$ \Comment{from an SVD of $D$; $D^{-1}b$ if square}
+\EndIf
+\ForAll{leaves $\tau$}
+  \State \textbf{if} $\ell_\tau+n_\tau<p_\tau$: $[V_\tau^*;D_\tau]\,\Omega_\tau=[\tilde V_\tau^*,0;\tilde D_\tau,0]$; \textbf{else} $\Omega_\tau=I$ \Comment{size reduction}
+  \State $P_\tau^*U_\tau=[0;\hat U_\tau]$; \ $\tilde D_\tau\gets P_\tau^*\tilde D_\tau$; \ $\hat b_\tau=P_\tau^*b_\tau$ \Comment{row compression}
+  \State $\tilde D_\tau(1{:}t_\tau,:)\,Q_\tau=[L_\tau,0]$; \ $\hat D_\tau=\tilde D_\tau Q_\tau$; \ $\hat V_\tau^*=\tilde V_\tau^*Q_\tau$ \Comment{column decoupling}
+  \State $X^{(1)}_\tau=L_\tau^{-1}\hat b_\tau(1{:}t_\tau)$ \Comment{forced solve}
+\EndFor
+\State $\bar b\gets\big(\hat b-\hat H[X^{(1)};0]\big)(\mathcal R_2)$ \Comment{one HSS product, \eqref{eq:bbar}}
+\State $\bar H\gets$ discard decoupled rows and forced columns, merge sibling leaves \eqref{eq:merge}
+\State $\bar x\gets\mathcal M(\bar H,\bar b)$ \Comment{one level fewer}
+\State \Return $x_\tau=\Omega_\tau\big[Q_\tau[X^{(1)}_\tau;\bar x_\tau];\,0\big]$ for every leaf
+\end{algorithmic}
+\end{algorithm}
+
+\input{sec_numerics.tex}
+
+% ======================================================================
+\section{Open Problems}\label{sec:open}
+\begin{enumerate}[leftmargin=1.5em,itemsep=2pt]
+\item \textbf{Floating-point analysis.} The experiments are consistent with backward stability, but there
+is no proof. A natural route is the backward-error analysis of ULV for square HSS matrices, extended by the
+size reduction.
+\item \textbf{Leaf size.} The cost model of Section~\ref{sec:complexity} is smallest for leaves of about $r$
+rows; choosing the leaf size from the ranks, instead of a fixed blocksize, should lower the constant.
+\item \textbf{Rank-deficient $H$.} The reduction is exact only for full row rank. Extending it to the
+minimum-norm least-squares solution would cover inconsistent and rank-deficient systems.
+\item \textbf{Higher dimensions.} For 2-D and 3-D problems the HSS ranks grow with the size of the
+interfaces between clusters; formats with strong admissibility ($\mathcal H^2$, recursive
+skeletonization) are needed, and the reduction of Section~\ref{sec:algorithm} should carry over block by
+block.
+\end{enumerate}
+
+\begin{thebibliography}{9}\small
+\bibitem{cgp} S.~Chandrasekaran, M.~Gu, T.~Pals, A fast ULV decomposition solver for hierarchically
+semiseparable representations, \emph{SIAM J. Matrix Anal. Appl.} 28 (2006).
+\bibitem{dh} J.~Demmel, N.~J.~Higham, Improved error bounds for underdetermined system solvers,
+\emph{SIAM J. Matrix Anal. Appl.} 14 (1993).
+\bibitem{gko} I.~Gohberg, T.~Kailath, V.~Olshevsky, Fast Gaussian elimination with partial pivoting
+for matrices with displacement structure, \emph{Math. Comp.} 64 (1995).
+\bibitem{higham} N.~J.~Higham, \emph{Accuracy and Stability of Numerical Algorithms}, 2nd ed., SIAM,
+2002.
+\end{thebibliography}
+\end{document}
