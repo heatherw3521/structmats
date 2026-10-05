@@ -1,9 +1,9 @@
 """Figures, the accuracy table and the numbers quoted in memo 1, from the text files that
-hss_examples/minnorm_paper/mp_memo1_run.m writes:
+hss_examples/minnorm_paper/mp_run_text_results.m writes:
 
-    results/memo1_correctness.txt   -> tables/tab_e1.tex
-    results/memo1_conditioning.txt  -> figures/m1_stability.pdf
-    results/memo1_scaling.txt       -> figures/m1_complexity.pdf, figures/m1_largescale_accuracy.pdf
+    results/correctness.txt   -> tables/tab_e1.tex
+    results/conditioning.txt  -> figures/m1_stability.pdf
+    results/scaling.txt       -> figures/m1_complexity.pdf, figures/m1_largescale_accuracy.pdf
     all three                       -> tables/numbers.tex (macros used in the text)
 
 Run from this folder:  python3 make_figures.py   (needs numpy and matplotlib).
@@ -103,7 +103,7 @@ macros = {}
 platforms = []
 
 # ---------------------------------------------------------------- accuracy table (tab:e1)
-rows, meta = read('memo1_correctness.txt')
+rows, meta = read('correctness.txt')
 platforms.append(meta[-1])
 L = [r'\begin{tabular}{@{}lrrrrrcccccc@{}}', r'\toprule',
      r'case & $m$ & $n$ & $L$ & rank & $\kappa(H)$ & As.~\ref{as:slack} & residual & solver error & null frac. & vs.\ $A$\\',
@@ -148,7 +148,7 @@ for r in rows:
     kap.setdefault(r['family'], []).append(r['kappa'])
 
 # ---------------------------------------------------------------- Figure: stability
-rows, meta = read('memo1_conditioning.txt')
+rows, meta = read('conditioning.txt')
 platforms.append(meta[-1])
 fig, axs = plt.subplots(1, 2, figsize=(8.6, 3.2))
 for j, (fam, title) in enumerate([('F2 graded', r'(a) F2$_\alpha$, graded columns, depth 3'),
@@ -200,7 +200,7 @@ for fam, key in [('F2 graded', 'Graded'), ('F4 blur', 'Blur')]:
     macros['EtwoCgItsMin' + key] = '%d' % min(r['cg_its'] for r in good) if good else '--'
 
 # ---------------------------------------------------------------- Figures: complexity, large-n accuracy
-rows, meta = read('memo1_scaling.txt')
+rows, meta = read('scaling.txt')
 platforms.append(meta[-1])
 fams = ['F1', 'F2', 'F3', 'F4', 'F5']
 names = {'F1': 'F1', 'F2': 'F2', 'F3': 'F3', 'F4': 'F4', 'F5': 'F5'}

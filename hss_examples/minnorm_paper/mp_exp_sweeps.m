@@ -1,7 +1,7 @@
 function S = mp_exp_sweeps(opts)
 %MP_EXP_SWEEPS  Time of H\b vs HSS rank, vs blocksize, and vs aspect ratio
-%   m/n (Assumption 1 of memo 1 fails at large m/n; the solver does not need
-%   it).  F2 exact random HSS.  Not used in memo 1.
+%   m/n (the leaf slack condition, see mp_slack_ok, fails at large m/n; the
+%   solver does not need it).  F2 exact random HSS.
 %   Times are of the first H\b (factor + solve), see mp_time_solve.
 if nargin < 1, opts = struct(); end
 q = isfield(opts,'quick') && opts.quick;

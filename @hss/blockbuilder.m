@@ -1,7 +1,8 @@
 function A = blockbuilder(H,Hparent)
-% builds Hblock
-% H is the piece we wish to reconstruct
-% Hparent is the parent of H
+%BLOCKBUILDER  Dense block of an HSS tree node (used by full and extract).
+%   A = blockbuilder(H, Hparent) returns the dense matrix represented by the
+%   node H, whose parent is Hparent; off-diagonal nodes are expanded through
+%   the nested bases of the parent's diagonal children.
 
 if H.isleaf
     A = leafbuild(H);
@@ -29,10 +30,6 @@ function left = leftdrill(H)
 
 if H.A11.isleaf && H.A22.isleaf
     left = blkdiag(H.A12.Z, H.A21.Z);
-% elseif H.A11.isleaf
-%     left = blkdiag(eye(H.A11.sz), leftdrill(H.A22)) * blkdiag(H.A12.Z, H.A21.Z);
-% elseif H.A22.isleaf
-%     left = blkdiag(leftdrill(H.A11), eye(H.A22.sz)) * blkdiag(H.A12.Z, H.A21.Z);
 else
     left = blkdiag(leftdrill(H.A11), leftdrill(H.A22)) * blkdiag(H.A12.Z, H.A21.Z);
 end

@@ -1,5 +1,5 @@
 function S = mp_exp_applications(opts)
-%MP_EXP_APPLICATIONS  Application-driven tests of the min-norm solve (not in memo 1)
+%MP_EXP_APPLICATIONS  Application-driven tests of the min-norm solve
 %   A1  band-limited (minimum-energy) interpolation from nonuniform samples
 %       (NUDFT / seismic trace regularisation): jittered sampling and a gap;
 %       index-based tree (hss_constructor rule) vs geometry-aligned tree

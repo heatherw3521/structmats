@@ -1,31 +1,27 @@
 function H = hss_constructor(H,A,options)
+%HSS_CONSTRUCTOR  Build an HSS matrix from a dense matrix or an entry function
+%   (called by hss). Rows and columns are split together down to a uniform
+%   leaf level; every off-diagonal block row and block column is compressed
+%   by a nested interpolative decomposition (skeleton rows/columns of the
+%   children are reused at the parent).
 
     arguments
-        % standard agruments in every case
         H;
-        A;
-        % NOTE: was unconstrained (options.blocksize = 200) -- blocksize
-        % <= 0 made the leafLevel loop below infinite: it only breaks
-        % when m2 or n2 (both >= 0, via floor(.../2)) drops below
-        % blocksize, which never happens once blocksize <= 0. Validating
-        % here turns that hang into an immediate, clear error instead.
+        A;                 % dense matrix, or function handle A(I,J) with sizeA
         options.blocksize (1,1) double {mustBePositive, mustBeInteger} = 200;
         options.sizeA = size(A);
         options.cutrule = @(k) ceil(k/2);
-        options.tol = 1e-12
+        options.tol = 1e-12            % relative ID tolerance
 
-        % if instead of thresholding we wish to prescribe a certain k value
+        % fixed rank for every off-diagonal block instead of a tolerance (0 = off)
         options.k = 0
 
-        % generally we will use interpolative decompositon but this can also be
-        % changed
-        % alternatives: 'SVD', TODO
+        % compression of the off-diagonal blocks: 'ID' (randomized,
+        % hssutil.inter_decompv3), 'oldID' (hssutil.inter_decompv2), or
+        % 'SVD' (planned, not implemented yet)
         options.decomp = 'ID'
 
-        % passed through to hssutil.inter_decompv3 -- see its own header
-        % for what each does. 0 power iterations by default (no change to
-        % existing behavior); escalatemargin already defaults sensibly
-        % inside inter_decompv3 itself, exposed here for convenience.
+        % passed to hssutil.inter_decompv3; see its header
         options.powerits = 0
         options.escalatemargin = 10
         options.escalatepowerits = 1
@@ -35,10 +31,7 @@ function H = hss_constructor(H,A,options)
     blocksize = options.blocksize;
     % ---- input checks
     % sizeA is only needed when A is a function handle A(I,J) returning
-    % entries. For a numeric A it must agree with size(A): a different
-    % value used to build a matrix of the wrong size from part of A
-    % (audit B09). NaN/Inf entries used to be accepted and spread through
-    % every product (audit B13).
+    % entries; for a numeric A it must agree with size(A).
     if isnumeric(A) || islogical(A)
         if ~isequal(double(options.sizeA(:)'), size(A))
             error('hss:sizeA', ['sizeA = %s does not match size(A) = %s; omit sizeA ' ...
@@ -63,10 +56,8 @@ function H = hss_constructor(H,A,options)
     % depth (the solver, discard() and levelup() rely on it). leafLevel is
     % the largest depth at which every leaf, in the worst case (always the
     % floor half), still has both dimensions >= blocksize. A custom cutrule
-    % does not change the depth; each of its cuts is checked to lie in
-    % 1..k-1 when it is applied (checkcut), because an unchecked cut such as
-    % @(k) k-1 used to create empty blocks and a matrix of the wrong size
-    % (audit B08).
+    % does not change the depth; each of its cuts must lie in 1..k-1
+    % (checked by checkcut).
     m = options.sizeA(1);
     n = options.sizeA(2);
     leafLevel = 0;
@@ -117,30 +108,22 @@ function H = hss_constructor(H,A,options)
         cutofftype = 'threshold';
     end
 
-    % NOTE: was `options.decomp == 'ID'` etc. -- char-array == instead of
-    % strcmp, which errors outright ("Arrays have incompatible sizes for
-    % this operation") whenever the option string has a different length
-    % than whichever literal happened to be compared first, making every
-    % branch but the very first unreachable regardless of which one the
-    % caller actually asked for.
     if strcmp(options.decomp, 'ID')
-        % powerits/escalatemargin baked in via closure rather than threaded
-        % through recursivestep/offdiagconstructor's own signatures -- every
-        % existing decomp(A_slice, ctype=..., cval=..., orientation=...)
-        % call site picks them up automatically through varargin forwarding.
+        % the sketching options are bound here, so every decomp(...) call
+        % below passes only the block, the cutoff and the orientation
         decomp = @(A, varargin) hssutil.inter_decompv3(A, varargin{:}, ...
             powerits = options.powerits, escalatemargin = options.escalatemargin, ...
             escalatepowerits = options.escalatepowerits);
-    elseif strcmp(options.decomp, 'SVD')
-        decomp = @svd_decomp;
     elseif strcmp(options.decomp, 'oldID')
         decomp = @hssutil.inter_decompv2;
+    elseif strcmp(options.decomp, 'SVD')
+        error('hss:decomp:notImplemented', "decomp 'SVD' is not implemented yet; use 'ID' or 'oldID'.")
     else
-        error("The given decomposition method must be 'ID', 'oldID', or 'SVD'")
+        error('hss:decomp', "decomp must be 'ID', 'oldID' or 'SVD'.")
     end
 
 
-    % toplevel set up
+    % root
     H.sz = options.sizeA;
     H.isroot = true;
     H.isleaf = false;
@@ -150,28 +133,28 @@ function H = hss_constructor(H,A,options)
     H.coltreeindex = 1;
     H.Ir = [1,H.sz(1)];
     H.Ic = [1,H.sz(2)];
-    H.blocksize = blocksize; % this keeps track of blocksize at the top level for ease of access, do i need? TODO
+    H.blocksize = blocksize;
     H.levelcount = leafLevel;
 
-    % determine where the cuts take place for level 2
+    % split of the root
     rowcut = checkcut(cutrule, H.sz(1));
     colcut = checkcut(cutrule, H.sz(2));
 
-    % setup the dictionaries for upward recursion storing decomps at
-    % various levels
+    % interpolation matrices and skeleton indices of every cluster, keyed by
+    % [level, index]; the parent's ID reuses its children's skeletons
     rowfactorDict = dictionary();
     rowindexDict = dictionary();
     colfactorDict = dictionary();
     colindexDict = dictionary();
 
 
-    % indices to recurse into
+    % row/column ranges of the two children
     lr = [H.Ir(1),H.Ir(1)+rowcut-1];
     rr = [H.Ir(1)+rowcut,H.Ir(2)];
     lc = [H.Ic(1),H.Ic(1)+colcut-1];
     rc = [H.Ic(1)+colcut,H.Ic(2)];
 
-    % diag recursion
+    % diagonal blocks (recursively)
     [H.A11,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = recursivestep(A, H.level+1, lr, lc, ...
         2*H.rowtreeindex-1, 2*H.coltreeindex-1, ...
         rowfactorDict,rowindexDict,colfactorDict,colindexDict,leafLevel,cutofftype,cutoffval,rr,rc,cutrule,decomp,options.sizeA);
@@ -180,8 +163,8 @@ function H = hss_constructor(H,A,options)
         rowfactorDict,rowindexDict,colfactorDict,colindexDict,leafLevel,cutofftype,cutoffval,lr,lc,cutrule,decomp,options.sizeA);
 
 
-    % off-diag construction at the first level (the remaining are done
-    % during the diag recursions)
+    % off-diagonal blocks of the root (the deeper ones are built inside the
+    % recursion)
     [H.A12,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = offdiagconstructor(A,H.level+1,lr, rc, ...
         2*H.rowtreeindex-1,2*H.coltreeindex, ...
         rowfactorDict,rowindexDict,colfactorDict,colindexDict,leafLevel,cutofftype,cutoffval,rr,lc,decomp,options.sizeA);
@@ -193,30 +176,22 @@ function H = hss_constructor(H,A,options)
 end
 
 function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = recursivestep(A,level,rows,cols,treerowindex,treecolindex,rowfactorDict,rowindexDict,colfactorDict,colindexDict,leafLevel,cutofftype,cutoffval,otherrows,othercols,cutrule,decomp,sizeA)
-    % inputs:
-    % A (mxn array, full matrix)
-    % level (integer, current level in recursion with 0 being the root
-    % rows (2x1 array, leftmost and rightmost row indices of this block)
-    % cols (2x1 array, leftmost and rightmost col indices of this block)
-    % treerowindex (integer, row index in the index tree at current level)
-    % treecolindex (integer, col index in the index tree at current level)
-    % rowfactorDict (dictionary, keys are 2x1 arrays of level and row index, values are the rank k factor for that level and row)
-    % colfactorDict (""" but for cols)
-    % rowindexDict (dictionary, keys are 2x1 arrays of level and row index, values are k rows computed from an interpolative decomposition of that level and row pairing)
-    % colindexDict (""" but for cols)
-    % blocksize (integer, size of a leaf block)
-    % cutofftype (either 'k' or 'threshold')
-    % cutoffval (if cutofftype = k: integer, rank of decomp) (if cutofftype = 'threshold': truncation value at which to stop decomps)
-    % otherrows (2x1 array, leftmost and rightmost row indices of the sibling block)
-    % othercols (2x1 array, leftmost and rightmost col indices of the sibling block)
-    % cutrule (how to split when building the tree)
-    % decomp (how to compute the decomposition, either 'ID' or 'svd')
+    % Diagonal node covering rows(1):rows(2), cols(1):cols(2) at the given
+    % level, with all its descendants.
+    %   A                  dense matrix or entry function
+    %   treerowindex/treecolindex   index of the row/column cluster in its level
+    %   row/colfactorDict  interpolation matrices per [level, index]
+    %   row/colindexDict   skeleton rows/columns per [level, index]
+    %   leafLevel          depth of the leaves
+    %   cutofftype         'k' (fixed rank) or 'threshold' (relative tolerance)
+    %   cutoffval          the rank or the tolerance
+    %   otherrows/othercols  row/column range of the sibling block
+    %   cutrule            size of the first child of a block of size k
+    %   decomp             interpolative decomposition (function handle)
+    %   sizeA              size of the full matrix
 
 
-    % create empty hss matrix
     H = hss();
-
-    % properties
     H.isroot = false;
     H.level = level;
     H.Ir = rows;
@@ -226,31 +201,27 @@ function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = recursivest
     H.sz = [H.Ir(2)-H.Ir(1)+1,H.Ic(2)-H.Ic(1)+1];
     H.isdiag = true;
 
-    % if size is less than blocksize we are at a leaf node
     if H.level == leafLevel
         H.isleaf = true;
     else
         H.isleaf = false;
         H.levelcount = leafLevel;
-        % determine the next split
         rowcut = checkcut(cutrule, H.sz(1));
         colcut = checkcut(cutrule, H.sz(2));
     end
 
-    % if we are at the leaf level
     if H.isleaf
-        % store the dense diag block
+        % leaf: store the dense diagonal block
         H.D = A(H.Ir(1):H.Ir(2),H.Ic(1):H.Ic(2));
         H.levelcount = leafLevel;
-    % not on the diag? recursion time!!
     else
-        % determine the indices for the next level down
+        % row/column ranges of the two children
         lr = [H.Ir(1),H.Ir(1)+rowcut-1];
         rr = [H.Ir(1)+rowcut,H.Ir(2)];
         lc = [H.Ic(1),H.Ic(1)+colcut-1];
         rc = [H.Ic(1)+colcut,H.Ic(2)];
 
-        % recurse into the diags
+        % diagonal children (recursively)
         [H.A11,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = recursivestep(A, H.level+1, lr, lc, ...
             2*H.rowtreeindex-1, 2*H.coltreeindex-1, ...
             rowfactorDict,rowindexDict,colfactorDict,colindexDict,leafLevel,cutofftype,cutoffval,rr,rc,cutrule,decomp,sizeA);
@@ -258,7 +229,7 @@ function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = recursivest
             2*H.rowtreeindex, 2*H.coltreeindex, ...
             rowfactorDict,rowindexDict,colfactorDict,colindexDict,leafLevel,cutofftype,cutoffval,lr,lc,cutrule,decomp,sizeA);
 
-        % construct the offdiags
+        % off-diagonal blocks between the two children
         [H.A12,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = offdiagconstructor(A,H.level+1,lr, rc, ...
             2*H.rowtreeindex-1,2*H.coltreeindex, ...
             rowfactorDict,rowindexDict,colfactorDict,colindexDict,leafLevel,cutofftype,cutoffval,rr,lc,decomp,sizeA);
@@ -272,29 +243,13 @@ end
 
 
 function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = offdiagconstructor(A,level,rows,cols,treerowindex,treecolindex,rowfactorDict,rowindexDict,colfactorDict,colindexDict,leafLevel,cutofftype,cutoffval,otherrows,othercols,decomp,sizeA)
-    % inputs:
-    % A (mxn array, full matrix)
-    % level (integer, current level in recursion with 0 being the root
-    % rows (2x1 array, leftmost and rightmost row indices of this block)
-    % cols (2x1 array, leftmost and rightmost col indices of this block)
-    % treerowindex (integer, row index in the index tree at current level)
-    % treecolindex (integer, col index in the index tree at current level)
-    % rowfactorDict (dictionary, keys are 2x1 arrays of level and row index, values are the rank k factor for that level and row)
-    % colfactorDict (""" but for cols)
-    % rowindexDict (dictionary, keys are 2x1 arrays of level and row index, values are k rows computed from an interpolative decomposition of that level and row pairing)
-    % colindexDict (""" but for cols)
-    % blocksize (integer, size of a leaf block)
-    % cutofftype (either 'k' or 'threshold')
-    % cutoffval (if cutofftype = k: integer, rank of decomp) (if cutofftype = 'threshold': truncation value at which to stop decomps)
-    % otherrows (2x1 array, leftmost and rightmost row indices of the sibling block)
-    % othercols (2x1 array, leftmost and rightmost col indices of the sibling block)
-    % decomp (how to compute the decomposition, either 'ID' or 'svd')
-
-
-    % creating HSS structure
+    % Off-diagonal node covering rows(1):rows(2), cols(1):cols(2) (arguments
+    % as in recursivestep; otherrows/othercols are the ranges of the diagonal
+    % block in the same block row/column, which the IDs exclude). At the
+    % leaf level the row basis is an ID of the whole block row of the row
+    % cluster (without its diagonal block), the column basis likewise; above
+    % the leaves the IDs act on the children's skeleton rows/columns only.
     H = hss();
-
-    % requisite defs
     H.isroot = false;
     H.level = level;
     H.Ir = rows;
@@ -309,99 +264,68 @@ function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = offdiagcons
         H.isleaf = false;
     end
 
-    % if we are at the leaf level
     if H.isleaf
 
-        % if the row decomp has already been computed use it!
+        % row basis: reuse it if this row cluster was already compressed
         if isConfigured(rowfactorDict) && isKey(rowfactorDict,{[H.level,H.rowtreeindex]})
             z = rowfactorDict({[H.level,H.rowtreeindex]});
             H.Z = z{1};
             rows = rowindexDict({[H.level,H.rowtreeindex]});
             H.lowrankrows = rows{1};
-            disp('here rows')
-        % otherwise we need to compute it
         else
-            % compute decomp
-            % TODO: This output is for ID
-            % input = z*input(rows,:)
-            %[z,rows] = decomp(A(H.Ir(1):H.Ir(2),indexsubtraction([1,size(A,2)],othercols)),ctype = cutofftype,cval = cutoffval, orientation = 'rows');
+            % row ID of the block row: A(rows,:) = Z * A(skeleton rows,:)
             [z,rows] = decomp(A(H.Ir(1):H.Ir(2),[1:othercols(1)-1,othercols(2)+1:sizeA(2)]),ctype = cutofftype,cval = cutoffval, orientation = 'rows');
-            % store z
             H.Z = z;
             rowfactorDict({[H.level,H.rowtreeindex]}) = {z};
 
-            % store rows
-            % adjusting by where in the matrix we are
+            % skeleton rows as global indices
             H.lowrankrows = rows+H.Ir(1)-1;
             rowindexDict({[H.level,H.rowtreeindex]}) = {rows+H.Ir(1)-1};
         end
 
-        % do the same for columns
+        % column basis, likewise
         if isConfigured(colfactorDict) && isKey(colfactorDict,{[H.level,H.coltreeindex]})
             y = colfactorDict({[H.level,H.coltreeindex]});
             H.Y = y{1};
             cols = colindexDict({[H.level,H.coltreeindex]});
             H.lowrankcols = cols{1};
-            disp('here cols')
-        % otherwise we need to compute it
         else
-            %[y,cols] = decomp(A(indexsubtraction([1,size(A,1)],otherrows),H.Ic(1):H.Ic(2)),ctype = cutofftype,cval = cutoffval, orientation = 'columns');
             [y,cols] = decomp(A([1:otherrows(1)-1,otherrows(2)+1:sizeA(1)],H.Ic(1):H.Ic(2)),ctype = cutofftype,cval = cutoffval, orientation = 'columns');
             H.Y = y;
             colfactorDict({[H.level,H.coltreeindex]}) = {y};
 
-            % adjusting by where in the matrix we are
             H.lowrankcols = cols+H.Ic(1)-1;
             colindexDict({[H.level,H.coltreeindex]}) = {cols+H.Ic(1)-1};
         end
-        % TODO: THIS IS ONLY TRUE FOR ID
+        % coupling matrix: the skeleton submatrix
         H.lrcomponent = A(H.lowrankrows,H.lowrankcols);
 
-    % not at the leaf level so we have preexisting decomps at a finer level
     else
-        % finding the children row decomps
-        1;
+        % above the leaves: IDs of the children's skeleton rows/columns
         rows1 = rowindexDict({[H.level+1,2*H.rowtreeindex-1]});
         rows2 = rowindexDict({[H.level+1,2*H.rowtreeindex]});
 
-        % decomp on just the selected rows of A
-        % TODO: this is specific to ID again :(
-       % [z,rows] = decomp(A([rows1{1},rows2{1}],indexsubtraction([1,size(A,2)],othercols)),ctype = cutofftype,cval = cutoffval, orientation = 'rows');
         [z,rows] = decomp(A([rows1{1},rows2{1}],[1:othercols(1)-1,othercols(2)+1:sizeA(2)]),ctype = cutofftype,cval = cutoffval, orientation = 'rows');
-        % saving z
-        H.Z = z;
+        H.Z = z;          % row translation matrix
         rowfactorDict({[H.level,H.rowtreeindex]}) = {z};
 
-        % saving rows
-        % adjusting by where in the matrix we are
         oldrows = [rows1{1},rows2{1}];
         H.lowrankrows = oldrows(rows);
         rowindexDict({[H.level,H.rowtreeindex]}) = {H.lowrankrows};
 
-        % columns next
-        % decomps exist on finer level
         cols1 = colindexDict({[H.level+1,2*H.coltreeindex-1]});
         cols2 = colindexDict({[H.level+1,2*H.coltreeindex]});
 
-        % TODO: specific to ID
-        %[y,cols] = decomp(A(indexsubtraction([1,size(A,1)],otherrows),[cols1{1},cols2{1}]),ctype = cutofftype,cval = cutoffval, orientation = 'columns');
         [y,cols] = decomp(A([1:otherrows(1)-1,otherrows(2)+1:sizeA(1)],[cols1{1},cols2{1}]),ctype = cutofftype,cval = cutoffval, orientation = 'columns');
 
-        H.Y = y;
+        H.Y = y;          % column translation matrix
         colfactorDict({[H.level,H.coltreeindex]}) = {y};
 
-        % adjusting by where in the matrix we are
         oldcols = [cols1{1},cols2{1}];
         H.lowrankcols = oldcols(cols);
         colindexDict({[H.level,H.coltreeindex]}) = {H.lowrankcols};
         H.lrcomponent = A(H.lowrankrows,H.lowrankcols);
     end
-end
-
-function Inew = indexsubtraction(I1,I2)
-    I1 = I1(1):I1(2);
-    I2 = I2(1):I2(2);
-    Inew = setdiff(I1,I2);
 end
 
 function c = checkcut(cutrule, k)

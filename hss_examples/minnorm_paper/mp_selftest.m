@@ -1,9 +1,10 @@
-%MP_SELFTEST  Unit tests for the minnorm_paper helpers (small sizes, dense checks).
+%MP_SELFTEST  Unit tests for the minnorm_paper and hss_examples/lib helpers (small sizes, dense checks).
 %   Run from hss_examples/minnorm_paper/ (adds lib/ and the repo root to the path).
 %   Every line prints PASS/FAIL with the measured error.
 here = fileparts(mfilename('fullpath'));
 if isempty(here), here = pwd; end
 addpath(fullfile(here, 'lib'));
+addpath(fullfile(fileparts(here), 'lib'));      % shared HSS test library (hss_examples/lib)
 if ~exist('OCTAVE_VERSION', 'builtin')
     addpath(fileparts(fileparts(here)));          % repo root (for @hss)
 end
@@ -108,18 +109,9 @@ x = mp_tikhonov(H, b, lam, w, s);
 xr = [s.*A; lam*diag(w)] \ [s.*b; zeros(300,1)];
 chk('Tikhonov general form (S, W diagonal) vs stacked LS', norm(x - xr)/norm(xr), 1e-10);
 
-% ---- proposed variant (proposed/mp_ulvminnormsolve_relaxed.m)
-addpath(fullfile(here, 'proposed'));
-G = mp_gen_random(256, 384, 12, 16, 7); H = mp_hss_from_generators(G); A = full(H);
-b = randn(256,1); xr = mp_minnorm_dense(A, b);
-fprintf('%-58s %-4s\n', 'proposed: test matrix violates Assumption 1', PF{1 + mp_slack_ok(G)});
-chk('proposed (no Assumption 1): vs dense min-norm', norm(mp_ulvminnormsolve_relaxed(H, b) - xr)/norm(xr), 1e-11);
-G = mp_gen_random(256, 256, 6, 16, 8); H = mp_hss_from_generators(G); A = full(H);
-b = randn(256,1);
-chk('proposed, square H: vs A\b', norm(mp_ulvminnormsolve_relaxed(H, b) - A\b)/norm(A\b), 1e-10);
+% ---- H\b on the Gaussian blur (kappa ~ 1e8): backward error
 K = mp_kernel_conv(300, 1, 'gauss', 2.0, 10);
 [L, rb, cb] = mp_tree(K.m, K.n, 16);
 H = mp_hss_from_generators(mp_hss_kernel(K, L, rb, cb, 1e-15)); A = full(H);
 b = randn(K.m,1); bw = @(x) norm(b - A*x)/(norm(A)*norm(x) + norm(b));
-chk('proposed, Gaussian blur (kappa ~ 1e8): backward error', bw(mp_ulvminnormsolve_relaxed(H, b)), 1e-15);
-fprintf('%-58s INFO  (%.2e)\n', '  H\b, same matrix: backward error', bw(H\b));
+chk('H\b, Gaussian blur (kappa ~ 1e8): backward error', bw(H\b), 1e-15);

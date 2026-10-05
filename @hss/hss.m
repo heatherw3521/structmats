@@ -1,43 +1,55 @@
 classdef hss
-    %HSS
+    %HSS  Hierarchically semiseparable (HSS) matrix.
+    %   H = hss(A) compresses the dense matrix A (or a function handle
+    %   A(I,J) returning entries, with 'sizeA', [m n]) into HSS form by
+    %   nested interpolative decompositions. Options: 'blocksize' (leaf
+    %   size, default 200), 'tol' (relative ID tolerance, default 1e-12),
+    %   'k' (fixed rank instead of a tolerance), 'cutrule', 'decomp'
+    %   ('ID' default, 'oldID'; 'SVD' planned).
+    %
+    %   Supported: H*X, H1*H2, H\b (square or minimum-norm wide solve,
+    %   factors kept with H), minnorm, tikhonov, H', H.', H(I,J), full,
+    %   size, end, spy, clearfactors.
+    %
+    %   The matrix is stored as a binary tree: every node holds its four
+    %   blocks A11, A12, A21, A22; diagonal leaves hold dense blocks D, and
+    %   off-diagonal nodes hold Z*lrcomponent*Y (bases at the leaves,
+    %   translation matrices above them).
     
     properties
-        A11 %upper left diag block
-        A22 %lower right diag block
+        A11 % upper left diagonal block (hss node)
+        A22 % lower right diagonal block (hss node)
 
-        A21 %lower left off diag block
-        A12 %upper right off diag block
+        A21 % lower left off-diagonal block (hss node)
+        A12 % upper right off-diagonal block (hss node)
 
         sz % [rows cols] of this block; use size(H) from outside the class
-        Ir %row indices in H
-        Ic %column indices in H
-        blocksize %value below which to stop creating new blocks (not necessarily the exact leaf level blocksize)
-        levelcount %number of levels
+        Ir % [first last] row of this block in the full matrix
+        Ic % [first last] column of this block in the full matrix
+        blocksize % leaf size requested at construction (root only)
+        levelcount % depth of the tree (level of the leaves)
             
-        level % level in tree with 0 being the root
-        rowtreeindex % row index relative to the level i am on
-        coltreeindex % column index relative to the level i am on
+        level % level of this node, 0 at the root
+        rowtreeindex % index of this node's row cluster within its level
+        coltreeindex % index of this node's column cluster within its level
 
-        isleaf %true or false
-        isdiag %true or false
-        isroot %true or false
-        %granular %true of false
+        isleaf % true for a leaf node
+        isdiag % true for a diagonal node
+        isroot % true for the root (the whole matrix)
 
-        % these contain the indices for the ID rows and columns
-        % TODO: ADJUST TO ANY DECOMP NOT JUST ID
-        lowrankrows % which rows to use from the full matrix
-        lowrankcols % which cols to use from the full matrix
+        lowrankrows % skeleton rows selected by the interpolative decomposition
+        lowrankcols % skeleton columns selected by the interpolative decomposition
  
-        Z % row ID factor
-        Y % column ID factor
-        D % dense (empty if not a leaf and diagonal)
-        lrcomponent % = A(lowrankrows,lowrankcols) (empty if on the diag)
+        Z % row basis (leaf) or row translation matrix (above the leaves)
+        Y % column basis (leaf) or column translation matrix (above the leaves)
+        D % dense block of a diagonal leaf (empty otherwise)
+        lrcomponent % coupling matrix B of an off-diagonal node: block = Z*B*Y
 
-        Q % QR factor of offdiagonals
-        S % RQ factor of diagonals
+        Q % unused
+        S % unused
 
-        minnormQ % QR for underdetermined system. Only stored at root level
-        nullorrange % is the minnormQ constructed to span nullspace(A) or range(A^T)
+        minnormQ % unused
+        nullorrange % unused
     end
 
     properties (Hidden, Transient)
@@ -129,8 +141,8 @@ classdef hss
             if isobject(obj) && ~isempty(obj.isroot) && obj.isroot
                 obj.factorcache = hssutil.FactorCache();
             end
-            % objects saved before the size -> sz rename (Oct 2026) load
-            % without their dimensions: rebuild them from Ir/Ic (or D)
+            % objects saved by older versions of the class may lack sz:
+            % rebuild it from Ir/Ic (or D)
             if isobject(obj) && isempty(obj.sz)
                 if ~isempty(obj.Ir) && ~isempty(obj.Ic)
                     obj.sz = [obj.Ir(2)-obj.Ir(1)+1, obj.Ic(2)-obj.Ic(1)+1];
@@ -143,7 +155,7 @@ classdef hss
     
      methods (Access = public, Static = false )
         function H = hss(varargin)
-            % Empty HSS
+            % hss() is an empty object
             if(nargin == 0)
                 H.A11 = [];
                 H.A22 = [];
@@ -169,23 +181,15 @@ classdef hss
                 return;
             end
 
-            % Call the main HSS constructor
             H = hss_constructor(H, varargin{:});
         end
-
-        % function y = mtimes(H1,H2)
-        %     y = hss_matvec(H1,H2);
-        % end
 
         function s = subsref(obj,ind)
             switch ind(1).type
                 case '()'
                     % H(I,J) and H(K) follow MATLAB's indexing rules: ':',
                     % logical masks, end, and positive integer indices
-                    % (any order, repeats allowed). Anything else errors;
-                    % previously out-of-range or fractional indices
-                    % returned 0 and logical masks were read as indices
-                    % 0/1 (audit B03, B04).
+                    % (any order, repeats allowed); anything else errors.
                     hss_assertroot(obj, 'indexing');
                     s = hss_index(obj, ind(1).subs);
                     if numel(ind) > 1

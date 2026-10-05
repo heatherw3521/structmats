@@ -1,8 +1,8 @@
 function [ok, nbad] = mp_slack_ok(G)
-%MP_SLACK_OK  Assumption 1 on the leaf level of generators G:
+%MP_SLACK_OK  Slack condition on the leaf level of generators G:
 %   l_tau + n_tau <= p_tau for every leaf (l_tau = column rank, n_tau rows,
-%   p_tau columns).  This is the check hss_ulvminnormsolve.m performs before
-%   each level; when it fails the code collapses (merges) the leaf level.
+%   p_tau columns). Reported by the experiments for reference only; the
+%   solver does not need it.
 L = G.L; nbad = 0;
 if L == 0, ok = true; return, end
 for i = 1:2^L

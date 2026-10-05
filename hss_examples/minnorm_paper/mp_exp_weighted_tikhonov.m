@@ -1,5 +1,5 @@
 function S = mp_exp_weighted_tikhonov(opts)
-%MP_EXP_WEIGHTED_TIKHONOV  Memo 2 accuracy/timing tests (all through H\b).
+%MP_EXP_WEIGHTED_TIKHONOV  Weighted min-norm and Tikhonov accuracy/timing tests (all through H\b).
 %   W1 weighted min-norm, L = diag(w), w_j = 10^(alpha*u_j), u ~ U[-1/2,1/2],
 %      and leaf-block L_tau = chol(I + beta*K_tau) (Gaussian smoothing K_tau);
 %      vs dense  x = L^{-1} (H L^{-1})^+ b

@@ -1,8 +1,5 @@
 function D = full(H)
-% full HSS
-% NOTE: previously had no base case for H.isleaf -- full() on a
-% single-leaf HSS matrix (whole matrix <= blocksize) crashed trying to
-% recurse into H.A11 etc., which don't exist for a leaf.
+%FULL  Dense matrix represented by an HSS matrix (O(m n) memory).
 if H.isleaf
     D = leafbuild(H);
     return
@@ -10,7 +7,7 @@ end
 if H.isdiag
     D = [blockbuilder(H.A11,H),blockbuilder(H.A12,H);blockbuilder(H.A21,H),blockbuilder(H.A22,H)];
 else
-    error('i messed this up, need to fix')
+    error('hss:full:node', 'full needs a diagonal node of an HSS tree.')
 end
 end
 

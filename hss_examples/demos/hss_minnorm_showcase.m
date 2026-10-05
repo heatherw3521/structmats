@@ -14,9 +14,9 @@
 %   2. minimum-norm-ness:            ||x - x_minnorm|| / ||x_minnorm||
 % and we time the HSS solve throughout.
 %
-% Test matrices are built the same way HSSSolvers_Demo.m's rectsampler()
-% does: start from an exactly rank-k matrix (so the HSS off-diagonal
-% compression is exact), then perturb every LEAF's dense diagonal block
+% Test matrices are built by rectsampler() (local function below): start
+% from an exactly rank-k matrix (so the HSS off-diagonal compression is
+% exact), then perturb every LEAF's dense diagonal block
 % with independent noise via diagmodify() so the local/diagonal blocks
 % are well-conditioned (full rank) -- the one precondition this ULV-style
 % solver needs, same as any HSS direct solver. Parts 1-5 use that
@@ -27,30 +27,15 @@
 % min-norm solver against something closer to a real use case.
 
 clear; clc; close all;
-% This file lives at <repoRoot>/hss_examples/demos/ -- @hss and +hssutil
-% live at <repoRoot> itself, so it's the repo root (not this script's own
-% folder) that needs to be on the path. genpath-ing this script's own
-% subtree (the old behaviour here) left @hss unresolved when this script
-% was run standalone, silently falling through to whatever unrelated
-% "hss" happened to already be on the base MATLAB path.
+% @hss and +hssutil live at the repo root, two levels up from this file.
 repoRoot = fileparts(fileparts(fileparts(mfilename('fullpath'))));
 addpath(repoRoot);
-% @hss/legacy/ is a plain subfolder (not class methods -- only files
-% directly inside @hss are those), so it needs its own explicit addpath;
-% ud_normeqs_pcg.m (Part 8) lives there. Derived from where @hss actually
-% resolved (via which()), not from repoRoot directly -- mfilename('fullpath')
-% only resolves correctly when this file is run as itself (not pasted, not
-% run section-by-section from a stale editor state), and repoRoot being
-% silently wrong there would otherwise make this specific addpath a no-op
-% (hss() itself can still work by luck if @hss was already reachable some
-% other way, e.g. the current folder, making the failure mode here easy to
-% miss until Part 8 actually calls ud_normeqs_pcg).
 hssClassFile = which('hss');
 if isempty(hssClassFile)
     error(['Could not locate the hss class on the path (tried adding repoRoot=%s). ' ...
         'Run this file directly (not pasted/section-by-section) so mfilename resolves correctly.'], repoRoot);
 end
-addpath(fullfile(fileparts(hssClassFile), 'legacy'));
+addpath(fullfile(repoRoot, 'hss_examples', 'lib'));   % baselines (ud_normeqs_pcg, ...) and test helpers
 
 set(groot,'defaultAxesFontSize',12);
 set(groot,'defaultAxesLineWidth',1.1);
@@ -288,8 +273,7 @@ for i = 1:numel(Ms_pcg)
 end
 
 %% Part 9 -- The dense array never exists at all, not even during construction
-% hss(Afun, sizeA=[M,N], ...) -- A(rows,cols) indexing invokes a handle
-% just like an array, so hss_constructor.m needs no changes for this.
+% hss(Afun, sizeA=[M,N], ...) evaluates only the entries it samples.
 
 M = 20000; ratio = 3; blocksize = 64; comptol = 1e-9;
 [Afun, sizeMN] = cauchyInterlacedHandle(M, ratio);
@@ -360,8 +344,8 @@ end
 end
 
 function [Z, HZ] = rectsampler(M, N, k, blocksize)
-% Same construction as HSSSolvers_Demo.m: build an exactly rank-k wide
-% matrix (so the HSS off-diagonal compression is exact -- zero
+% Build an exactly rank-k wide matrix (so the HSS off-diagonal
+% compression is exact -- zero
 % reconstruction error, independent of tolerance/rank-detection), then
 % perturb each leaf's OWN dense diagonal block with independent noise so
 % the local blocks are well-conditioned (full rank). The off-diagonal
@@ -391,18 +375,10 @@ function A = cauchyInterlaced(M, ratio)
 % no y ever coincides exactly with an x (which would give a literal
 % division by zero).
 %
-% This is deliberately NOT the "two disjoint intervals" version tried
-% first in this rewrite (x on one interval, y entirely on another, far
-% away): that construction was catastrophically ill-conditioned as a full
-% matrix (cond(A) ~ 1e18, even a dense solve failed) because EVERY entry
-% is "far field" -- there is no near-singular near-field structure to
-% anchor the matrix's own conditioning, only the smooth far-field decay
-% that makes off-diagonal blocks compressible in the first place.
-% Interlacing gives every point genuine near neighbors (handled densely,
-% by the HSS leaves) as well as genuine far ones (compressed,
-% off-diagonal) -- much closer to how real kernel/BEM matrices are built,
-% and it fixes the conditioning completely: cond(A) stays close to 1 at
-% every size tested, no artificial diagonal boost needed at all.
+% Interlacing gives every point near neighbors (handled densely by the
+% leaves) as well as far ones (compressed off-diagonal blocks), so cond(A)
+% stays close to 1 at every size; points on two disjoint intervals would
+% make A severely ill-conditioned (cond ~ 1e18).
 x = (1:M)';
 y = zeros((M-1)*ratio, 1);
 idx = 1;
@@ -417,17 +393,10 @@ end
 
 function [Afun, sizeMN] = cauchyInterlacedHandle(M, ratio)
 % Same interlaced Cauchy kernel as cauchyInterlaced(), but returns a
-% FUNCTION HANDLE Afun(I,J) that evaluates entries on demand instead of a
-% formed M x N array -- for use directly as
-% hss(Afun, blocksize=..., sizeA=sizeMN, tol=...). hss_constructor.m only
-% ever accesses its input via ordinary A(rows,cols) indexing, and that
-% syntax invokes a function handle exactly like it indexes an array, so
-% no change to the constructor is needed -- passing sizeA explicitly
-% (rather than leaving it to default to size(A), which would misread a
-% handle as a 1x1 "matrix") is the only thing that matters. This is how
-% genuinely large kernel matrices are built in practice: the dense array
-% is never formed, not even during construction -- only the small blocks
-% the constructor actually samples ever get materialized. See Part 9.
+% function handle Afun(I,J) that evaluates entries on demand, for use as
+% hss(Afun, blocksize=..., sizeA=sizeMN, tol=...). sizeA is required with a
+% handle. The dense array is never formed; only the blocks the constructor
+% samples are evaluated. See Part 9.
 N = (M-1)*ratio;
 x = (1:M)';
 y = zeros(N, 1);

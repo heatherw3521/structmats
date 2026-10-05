@@ -1,20 +1,15 @@
 #include <math.h> 
 #include "mex.h"
 
+/* S = sparsesign(d, m, zeta): d x m sparse sign matrix with zeta nonzeros
+ * (+-1/sqrt(zeta), distinct random rows) in every column. */
+
 #define RADEMACHER() (2 * (rand() % 2) -1)
 
 int log_base_d(long a, int d) {
-    /* d <= 1 is degenerate (every sampled "digit" is forced to 0, since
-     * rows[] = myrand % d): with d == 1, a /= d is a no-op, so the loop
-     * below never terminates (a never decreases, so `a > 0` never goes
-     * false) -- an infinite loop, previously reachable whenever sparsesign
-     * was called with a sketch dimension of 1 (e.g. a near-degenerate,
-     * e.g. single-column, off-diagonal HSS block). d == 0 would also be
-     * undefined behavior (division by zero). Returning 1 here just means
-     * "one digit per rand() call" for the caller (i.e. regenerate rand()
-     * every time), which is safe and correct -- if slightly wasteful --
-     * since no real randomness is needed when every index is forced to 0
-     * anyway. */
+    /* d <= 1: every sampled index is 0 and the loop below would not
+     * terminate (d == 1) or divide by zero (d == 0); draw a new rand() for
+     * every index instead. */
     if (d <= 1) {
         return 1;
     }

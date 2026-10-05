@@ -9,7 +9,7 @@ function x = minnorm(H, b, varargin)
 %   order, sized like the leaf column blocks (L = blkdiag(L_1, ..., L_q)).
 %   H must have full row rank (wide or square). b may have several columns.
 %
-%   Method (memo 2): with y = L*x the problem is min ||y|| s.t. (H/L)*y = b,
+%   Method: with y = L*x the problem is min ||y|| s.t. (H/L)*y = b,
 %   and H/L is HSS on the same tree with only the leaf generators changed
 %   (D_tau/L_tau and the leaf column bases). L is applied by solves.
 %

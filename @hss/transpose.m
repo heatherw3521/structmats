@@ -1,10 +1,7 @@
 function Ht = transpose(H)
-% PLAIN (non-conjugate) TRANSPOSE FOR HSS MATRIX -- the ".'" operator.
-% NOTE: previously conjugated H.D here (via ') while odt() below only
-% ever plain-transposed Z/Y/lrcomponent (via .') -- an inconsistent mix
-% that happened to cancel out for real-valued matrices (where ' and .'
-% agree) but produced a wrong result for complex ones. See ctranspose.m
-% for the conjugating counterpart bound to the "'" operator.
+%TRANSPOSE  Transpose H.' of an HSS matrix (no conjugation).
+%   Swaps the row and column generators and transposes every stored block;
+%   the result is HSS on the transposed tree. See also ctranspose.
 if H.isleaf
     Ht = H;
     Ht.sz = [H.sz(2) H.sz(1)];

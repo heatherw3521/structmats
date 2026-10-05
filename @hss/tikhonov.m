@@ -11,7 +11,7 @@ function [x, r] = tikhonov(H, b, lambda, varargin)
 %   sized like H's leaf column blocks (L invertible), S's like its leaf row
 %   blocks. Omitted: identity. b may have several columns.
 %
-%   Method (memo 2): standard form Ht = S*H/L, bt = S*b; then the minimum-norm
+%   Method: standard form Ht = S*H/L, bt = S*b; then the minimum-norm
 %   solution of the augmented wide system [Ht, lambda*I] z = bt, with the
 %   identity columns interleaved leaf by leaf, is HSS on the same tree and has
 %   full row rank for every lambda > 0. x = L \ z_x, r = -lambda*z_s.

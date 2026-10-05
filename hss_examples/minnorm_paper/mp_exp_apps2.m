@@ -1,5 +1,5 @@
 function S = mp_exp_apps2(opts)
-%MP_EXP_APPS2  Memo 2 applications (inner solves through H\b, minnorm, tikhonov).
+%MP_EXP_APPS2  Applications of the weighted solvers (inner solves through H\b, minnorm, tikhonov).
 %   BP   sparse-spike deconvolution (Ricker, stride 2) by basis pursuit:
 %        IRLS (inner loop = diagonal-weight min-norm) and Douglas-Rachford
 %        (inner step = min-norm projection H\b; H keeps its factors, so only

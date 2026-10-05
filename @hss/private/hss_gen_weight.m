@@ -2,7 +2,7 @@ function G = hss_gen_weight(G, S, L)
 %HSS_GEN_WEIGHT  Generators of S * H * inv(L) for leaf-conforming S and L.
 %   S (rows) and L (columns) are each [] (identity), a vector (diagonal), or a
 %   cell array of square blocks, one per leaf, in leaf order. Only the leaf
-%   generators change (memo 2, Lemma 3.1):
+%   generators change:
 %       D_tau <- S_tau * D_tau / L_tau,   U_tau <- S_tau * U_tau,
 %       V_tau <- L_tau' \ V_tau          (V_tau^* <- V_tau^* / L_tau).
 %   L is applied by solves, never by forming inv(L_tau).

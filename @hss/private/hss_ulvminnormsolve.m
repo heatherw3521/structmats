@@ -1,57 +1,47 @@
 function [x,H] = hss_ulvminnormsolve(H,b)
-% ULV solve with a wide or square multi-level HSS matrix:
+%HSS_ULVMINNORMSOLVE  ULV solve with a wide or square HSS matrix:
 %     x = argmin ||x||_2  subject to  H*x = b
-% (for square nonsingular H, the unique solution). H\b calls this for both
-% shapes; the factors are kept in H's factor cache (see @hss/hss.m), so
-% users never call this directly.
+% (for square nonsingular H, the unique solution). H\b, minnorm and
+% tikhonov call this and keep the factors in H's factor cache, so users do
+% not call it directly.
 %
 %   x = hss_ulvminnormsolve(H, b)    factor, then solve (b may have several columns)
 %   F = hss_ulvminnormsolve(H)       factor only; F is a struct of stored factors
 %   x = hss_ulvminnormsolve(F, b)    solve with stored factors, O(n r) per solve
 %   [x, H] = hss_ulvminnormsolve(H, b) returns H unchanged (signature used by mldivide)
 %
-% Public entry points: H\b (mldivide.m), minnorm.m, tikhonov.m, which cache
-% the struct F returned by the factor-only call.
-%
-% Requirements:
+% Requirements and checks:
 %   * H has full row rank. 'hss_ulvminnormsolve:rankDeficient' is raised when
 %     the sizes show that it fails (a leaf with more decoupled rows than
-%     columns, or a tall root block). A deficiency the sizes do not show (a
-%     singular L_tau, or a rank-deficient wide root block) is not detected.
+%     columns, or a tall root block). If the reduced root block is
+%     numerically rank deficient, a consistent b gives a warning
+%     ('...:rankDeficientRoot') and the minimum-norm solution, an
+%     inconsistent b an error ('...:inconsistent'). A singular L_tau is not
+%     detected beyond MATLAB's own warning for singular triangular solves.
 %   * no row basis is wider than the block it spans: k_tau <= m_tau at every
 %     (current) leaf ('hss_ulvminnormsolve:improperRanks', always checked).
 %     Nested-ID constructions (hss_constructor) always satisfy this.
 %
-% Changes from @hss/legacy/hss_ulvminnormsolve.m (memo 1, HSS_Min_Norm_Solve_Memo_v2.pdf):
-%   1. Root solve applies the SVD factors of the root block to b. The legacy
-%      pinv(H.D)*b forms the pseudo-inverse explicitly, which is not backward
-%      stable: its residual grows like cond(root)*eps*norm(b) (memo 1, Sec. 6.4).
-%   2. The checks above replace failures inside an index.
-%   3. Size-reduced width p' = min(n_tau, l_tau + m_tau) instead of l_tau + m_tau.
-%      The legacy fixed width needs l_tau + m_tau <= n_tau ("slack"); without it,
-%      YD(:,1:(l+m)) indexes past the n_tau columns the LQ factor has, which is
-%      why the legacy code checks the slack and merges tree levels (levelup)
-%      until it holds. With the relaxed width nothing is discarded when the
-%      slack is short, and the only size condition left, t_tau = m_tau - k_tau
-%      <= p'_tau (L_tau square), holds whenever H has full row rank (memo 1,
-%      Lemma 4.4 and Prop. 4.8). No level is ever merged; square H works too.
-%   4. Economic QR in the size reduction: Omega_tau is p' x n_tau instead of
-%      n_tau x n_tau, so time and memory drop by about n_tau/(l_tau + m_tau)
-%      for very wide matrices. (The QL of U and the decoupling LQ stay full:
-%      P_tau and Q_tau must be square.)
-%   5. Factor/solve split: every level's factors (Omega, P, Q, L, the
-%      transformed matrix used for the RHS update) are stored, so a new
-%      right-hand side costs triangular solves, one HSS product per level and
-%      small unitary products, without refactoring. Several right-hand sides
-%      (columns of b) are solved together.
-%   6. A leaf with l_tau + m_tau >= n_tau (always the case for square H) skips
-%      the size reduction: it would discard nothing, so Omega_tau = I. This is
-%      what makes the same code the square solver too (it replaced
-%      hss_ulvvecsolve.m, now in @hss/legacy/, as the square path of H\b).
+% One level of the algorithm, for every leaf tau:
+%   1. Size reduction: an LQ factorization [V_tau^*; D_tau] = L*Omega_tau
+%      (economic) keeps p' = min(n_tau, l_tau + m_tau) columns; the columns
+%      outside the row space of Omega_tau are zero in the whole block column
+%      and can be dropped. Leaves with l_tau + m_tau >= n_tau (always the
+%      case for square H) skip this step (Omega_tau = I).
+%   2. Decoupling: a QL factorization of the row basis, U_tau = P_tau*[0; Uhat],
+%      leaves t_tau = m_tau - k_tau rows that couple to no other leaf; an LQ
+%      factorization of those rows gives a lower triangular L_tau.
+%   3. Forced solve: L_tau determines the first t_tau unknowns of the leaf.
+%   4. The remaining rows and unknowns form an HSS matrix with one level
+%      fewer (discard + levelup), solved recursively; the root block is
+%      solved with its SVD (wide) or LU (square) factors, never with an
+%      explicit pseudo-inverse.
+% Every level's factors (Omega, P, Q, L and the transformed matrix used for
+% the right-hand-side update) are stored, so a new right-hand side costs
+% triangular solves, one HSS product per level and small unitary products.
 %
 % Notation in this file follows the code: a leaf has m rows and n columns,
-% k = rank of its row basis (Z), l = rank of its column basis (Y); in the
-% memo these are n_tau, p_tau, k_tau, l_tau.
+% k = rank of its row basis (Z), l = rank of its column basis (Y).
 
 if nargin == 1
     x = factor_level(H);
@@ -130,7 +120,7 @@ else
     F.U = U(:, 1:r); F.s = s(1:r); F.V = V(:, 1:r);
     % left singular vectors of the dropped directions: empty when the root
     % has full row rank; otherwise root_solve uses them to tell a
-    % consistent b from one with no solution (audit B11)
+    % consistent b from one with no solution
     F.Uperp = U(:, r+1:m);
     F.kind = 'svd';
 end
@@ -151,11 +141,11 @@ if H.A11.isleaf
     check_ranks(H.A11.Ir, k1, m1);
     check_ranks(H.A22.Ir, k2, m2);
 
-    % ---- size reduction (change 3: width min(n, l+m); change 4: economic QR)
+    % ---- size reduction (width min(n, l+m), economic LQ)
     % [V^*; D] = L*Om, Om with orthonormal rows; keep all r = min(n, l+m)
-    % columns of L.  Columns outside Om's row space are zero in the whole
-    % block column (memo 1, Lemma 2.1) and are dropped.  Change 6: if
-    % l + m >= n nothing would be dropped, so skip it (Om = [] means I).
+    % columns of L. Columns outside Om's row space are zero in the whole
+    % block column and are dropped. If l + m >= n nothing would be dropped,
+    % so the step is skipped (Om = [] means I).
     if l1 + m1 < n1
         [YD1, Om1] = lq_econ([H.A21.Y; H.A11.D]);
         H.A21.Y = YD1(1:l1, :);   H.A11.D = YD1(l1+1:end, :);
@@ -230,7 +220,7 @@ end
 
 
 function check_ranks(Ir, k, m)
-% change 2: a row basis wider than its leaf would make t = m - k negative
+% a row basis wider than its leaf would make t = m - k negative
 if k > m
     error('hss_ulvminnormsolve:improperRanks', ...
         ['the leaf with rows %s has a row basis of rank %d but only %d rows. ' ...
@@ -243,7 +233,7 @@ end
 
 
 function check_width(Ir, t, r)
-% change 2: the t decoupled rows of a leaf live on its r size-reduced columns
+% the t decoupled rows of a leaf live on its r size-reduced columns
 % only; if t > r they are linearly dependent, so H lacks full row rank
 if t > r
     error('hss_ulvminnormsolve:rankDeficient', ...
@@ -337,9 +327,10 @@ end
 
 % ======================================================================
 % reduced matrix: discard decoupled rows / forced columns, merge leaves
-% (unchanged from the legacy file)
 % ======================================================================
 function H = discard(H)
+% drop the decoupled rows and forced columns of every leaf (keep the last k rows,
+% and the columns after the first t)
 if H.A11.isleaf
     [m1,n1] = size(H.A11.D);
     [m2,n2] = size(H.A22.D);
@@ -368,6 +359,7 @@ end
 
 
 function [H,rstart,cstart] = levelup(H,rstart,cstart)
+% merge the leaf level into its parents: the result has one level fewer
 if H.A11.isleaf
     H.D = [H.A11.D, H.A12.Z*H.A12.lrcomponent*H.A12.Y; H.A21.Z*H.A21.lrcomponent*H.A21.Y, H.A22.D];
     H.A11 = [];
@@ -406,7 +398,9 @@ end
 
 
 function [Hparent,rstart,cstart] = onerebuild(H,Hparent,rstart,cstart)
-% UNCHANGED from hss_ulvvecsolve.m.
+% one node of the level above the leaves, for levelup: a diagonal node becomes a
+% dense leaf (its children merged); an off-diagonal node absorbs its children's
+% bases into its own, which become the new leaf bases
 if H.isdiag
     H.D = [H.A11.D, H.A12.Z*H.A12.lrcomponent*H.A12.Y; H.A21.Z*H.A21.lrcomponent*H.A21.Y,H.A22.D];
     H.A11 = [];
@@ -452,9 +446,9 @@ end
 
 
 % ======================================================================
-% dense kernels.  Convention: lq returns A = L*Q (Q with orthonormal rows),
-% so the stored factors are the conjugate transposes of the memo's
-% Omega_tau, Q_tau, and the reconstruction applies Om' and Q'.
+% dense kernels. Convention: lq returns A = L*Q (Q with orthonormal rows),
+% so the stored factors are the conjugate transposes of Omega_tau and Q_tau
+% above, and the reconstruction applies Om' and Q'.
 % ======================================================================
 function [Q, L] = ql(A)
 % A = Q*L, Q square unitary, L zero except its last size(A,2) rows

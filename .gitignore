@@ -1,6 +1,2 @@
 .DS_Store
 *.asv
-
-# Large regenerable benchmark result caches (100MB+, exceeds GitHub's push limit)
-hss/demos/hss_scaling_results.mat
-hss/demos/hss_scaling_results_v2.mat

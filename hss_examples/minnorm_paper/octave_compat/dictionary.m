@@ -1,7 +1,7 @@
 classdef dictionary < handle
   % Minimal Octave stand-in for MATLAB's dictionary, covering only the API
   % used by the hss class: d({key}) = {val}; v = d({key}); isKey; isConfigured.
-  % TEST HARNESS ONLY (not part of the delivered MATLAB code).
+  % Octave only; MATLAB has dictionary built in.
   properties
     map
   end
@@ -14,7 +14,7 @@ classdef dictionary < handle
         case '()'
           key = dictionary.k2s(s(1).subs{1});
           if ~isKey(obj.map, key)
-            error('dictionary shim: key %s not found', key);
+            error('dictionary: key %s not found', key);
           end
           out = {obj.map(key)};
           if numel(s) > 1

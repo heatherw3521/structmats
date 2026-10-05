@@ -1,5 +1,5 @@
 function S = mp_exp_conditioning(opts)
-%MP_EXP_CONDITIONING  E2 (memo 1, Section 7.4, Figure 2): accuracy vs conditioning.
+%MP_EXP_CONDITIONING  E2: accuracy vs conditioning.
 %   Compares H\b with three other ways of computing the minimum-norm
 %   solution: the dense QR solution (QR of H', the reference), the dense
 %   normal equations (Cholesky of H*H') and CGNE (pcg on H*H' with HSS
@@ -10,7 +10,7 @@ function S = mp_exp_conditioning(opts)
 %   Forward error = relative difference from the dense QR solution (both are
 %   accurate to about kappa*eps, so this cannot drop below that). Backward
 %   error = ||b - Hx|| / (||H|| ||x|| + ||b||), which needs no reference.
-%   Writes results/memo1_conditioning.txt.
+%   Writes results/conditioning.txt.
 if nargin < 1, opts = struct(); end
 quick = isfield(opts, 'quick') && opts.quick;
 here = fileparts(mfilename('fullpath')); if isempty(here), here = pwd; end
@@ -34,9 +34,9 @@ T = [S.graded, S.blur];
 fam = [repmat({'F2 graded'}, 1, numel(S.graded)), repmat({'F4 blur'}, 1, numel(S.blur))];
 for k = 1:numel(T), T(k).family = fam{k}; end
 tag = ''; if quick, tag = '_quick'; end
-mp_write_table(fullfile(here, 'results', ['memo1_conditioning' tag '.txt']), T, ...
+mp_write_table(fullfile(here, 'results', ['conditioning' tag '.txt']), T, ...
     {'family', 'param', 'kappa', 'ulv_fwd', 'ulv_bwd', 'qr_bwd', 'ne_fwd', 'ne_bwd', 'cg_fwd', 'cg_bwd', 'cg_its', 'cg_flag'}, ...
-    'E2 conditioning (memo 1, Figure 2): param = alpha (F2 graded) or sigma (F4 blur); fwd = difference from dense QR');
+    'E2 conditioning: param = alpha (F2 graded) or sigma (F4 blur); fwd = difference from dense QR');
 end
 
 function r = onecond(H, p, cgmax)

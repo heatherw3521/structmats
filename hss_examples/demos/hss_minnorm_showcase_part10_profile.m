@@ -10,14 +10,13 @@ if isempty(hssClassFile)
     error(['Could not locate the hss class on the path (tried adding repoRoot=%s). ' ...
         'Run this file directly so mfilename resolves correctly.'], repoRoot);
 end
-addpath(fullfile(fileparts(hssClassFile), 'legacy'));
+addpath(fullfile(repoRoot, 'hss_examples', 'lib'));   % baselines (ud_normeqs_pcg, ...) and test helpers
 
 %% Part 10 -- Pushing further still: genuinely large, matrix-free throughout
 % Same sizes as hss_minnorm_showcase.m's Part 10; wrapped in the profiler.
 
 ratio = 3; blocksize = 64; comptol = 1e-9;
 Ms_large = [30000, 60000, 100000];
-% Ms_large = [30000];
 fprintf('Part 10 (profiled): matrix-free kernel, pushed larger\n');
 fprintf('%-8s %-6s %-10s %-10s %-10s %-10s %-10s\n', ...
     'M','levels','build(s)','ULV(s)','pcg(s)','ulv_res','ulv_err');

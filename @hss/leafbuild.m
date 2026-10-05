@@ -1,8 +1,7 @@
 function out = leafbuild(H)
-% build the leaf component H
-%%
+%LEAFBUILD  Dense block of a leaf node: D for a diagonal leaf, Z*B*Y otherwise.
 if ~H.isleaf
-    error('not a leaf')
+    error('hss:leafbuild:notLeaf', 'leafbuild needs a leaf node.')
 elseif H.isdiag
     out = H.D; 
 else

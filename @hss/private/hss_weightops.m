@@ -24,7 +24,7 @@ switch op
                 if ~all(isfinite(W{i}(:)))
                     error('hss:weight:nonFinite', '%s{%d} contains NaN or Inf.', name, i);
                 end
-                % a singular block used to pass and give a meaningless x (audit B12)
+                % a singular block would make the weighted problem meaningless
                 if inv_req && ni > 0 && ~(rcond(full(W{i})) > eps)
                     error('hss:weight:singular', ['%s{%d} is singular to working precision ' ...
                         '(rcond = %.1e); it must be invertible.'], name, i, rcond(full(W{i})));

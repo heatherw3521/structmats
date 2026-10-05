@@ -1,14 +1,14 @@
 function R = mp_exp_correctness(opts)
-%MP_EXP_CORRECTNESS  E1 (memo 1, Section 7.3, Table 2): H\b against the dense minimum-norm
+%MP_EXP_CORRECTNESS  E1: H\b against the dense minimum-norm
 %   solution, for every test family at a size where dense references fit.
 %   Records kappa(H), the residual, the error against the dense minimum-norm
 %   solution of the HSS matrix itself (solver error alone), the error against
 %   the minimum-norm solution of the original matrix A (adds the compression
 %   error; for the exact families F1 and F2, A is the HSS matrix), the
 %   null-space fraction of x, and whether the leaves satisfy the slack
-%   condition of Assumption 1 (the solver does not need it).
+%   condition (mp_slack_ok; the solver does not need it).
 %   Leaves are small (16-32 rows) so that every tree has 4-7 levels.
-%   Writes results/memo1_correctness.txt.
+%   Writes results/correctness.txt.
 if nargin < 1, opts = struct(); end
 q = isfield(opts, 'quick') && opts.quick;
 here = fileparts(mfilename('fullpath')); if isempty(here), here = pwd; end
@@ -59,9 +59,9 @@ for k = 1:numel(R)
         r.name, r.m, r.n, r.L, r.maxrank, r.kappa, r.res, r.err_H, r.err_A, r.null, r.slack_ok, r.time);
 end
 tag = ''; if q, tag = '_quick'; end
-mp_write_table(fullfile(here, 'results', ['memo1_correctness' tag '.txt']), R, ...
+mp_write_table(fullfile(here, 'results', ['correctness' tag '.txt']), R, ...
     {'name', 'family', 'm', 'n', 'L', 'maxrank', 'kappa', 'res', 'err_H', 'err_A', 'null', 'slack_ok', 'time'}, ...
-    'E1 correctness (memo 1, Table 2): err_H vs dense min-norm of H, err_A vs dense min-norm of the original matrix');
+    'E1 correctness: err_H vs dense min-norm of H, err_A vs dense min-norm of the original matrix');
 end
 
 function r = onecase(name, family, G, A)

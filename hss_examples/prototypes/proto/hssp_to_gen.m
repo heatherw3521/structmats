@@ -1,7 +1,6 @@
-function G = hss_to_gen(H)
-%HSS_TO_GEN  Read the generators (D, U/R, V/W, B12, B21, cluster boundaries)
-%   out of an hss object; inverse of hss_from_gen. Used by minnorm/tikhonov to
-%   edit the leaf generators. Requires every leaf at the same depth (true for
+function G = hssp_to_gen(H)
+%HSSP_TO_GEN  Read the generators (D, U/R, V/W, B12, B21, cluster boundaries)
+%   out of an hss object; inverse of hss_from_gen. Requires every leaf at the same depth (true for
 %   everything hss_constructor.m builds); otherwise errors.
 L = H.levelcount;
 G.L = L;
@@ -15,7 +14,7 @@ for l = 0:L
     if l < L, G.B12{l+1} = cell(2^l,1); G.B21{l+1} = cell(2^l,1); end
 end
 if L == 0
-    G.D{1} = H.D; G.rb{1} = [0 H.sz(1)]; G.cb{1} = [0 H.sz(2)];
+    G.D{1} = H.D; G.rb{1} = [0 size(H, 1)]; G.cb{1} = [0 size(H, 2)];
     return
 end
 G = walk(H, 0, 1, G);

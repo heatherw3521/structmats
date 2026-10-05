@@ -1,7 +1,7 @@
 # octave_compat (only for GNU Octave; MATLAB users can ignore this folder)
 
-The suite was validated in GNU Octave 8.4 by running the repo's `@hss` code unmodified, except
-for three syntax-level incompatibilities that are handled outside the repo:
+The suite runs in GNU Octave 8.4 or later on the repo's `@hss` code, unmodified except for three
+syntax-level incompatibilities that the files here work around:
 
 1. `dictionary.m`: a minimal stand-in for MATLAB's `dictionary` (used by `hss_matvec`),
    built on `containers.Map`.

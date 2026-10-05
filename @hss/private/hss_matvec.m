@@ -1,19 +1,13 @@
 function y = hss_matvec(H,v)
-% hss times vector multiplication
-% H: mxn hss matrix
-% v: nx1 vector
-% vsize = size(v);
-% y = zeros(H.sz(1),vsize(2));
-% if vsize(2) >1
-%     y = [hss_matvec(H,v(:,1)), hss_matvec(H,v(:,2:end))];
-%     return
-% end
+%HSS_MATVEC  y = H*v for an m x n HSS matrix H and an n x k dense v.
+%   Upward pass: compress v through the column bases (ascend); downward
+%   pass: expand through the row bases and add the leaf products (descend).
 if H.isleaf == false
     dict = dictionary();
-    % starting from the bottom build dict up
+    % upward pass: column coefficients of every node
     dict = ascend(H,v,dict);
 
-    % using dict descend 
+    % downward pass: row coefficients, then the leaf products
     y = descend(H,v,dict);
     
 elseif H.isdiag %leaf diag
@@ -29,8 +23,6 @@ function dict = ascend(H,v,dict)
 
 
 if H.A11.isleaf == false
-    %dict = ascend(H.A11,v(H.A11.Ic(1)-H.Ic(1)+1:H.A11.Ic(2)-H.Ic(1)+1,1),dict);
-    %dict = ascend(H.A22,v(H.A22.Ic(1)-H.Ic(1)+1:H.A22.Ic(2)-H.Ic(1)+1,1),dict);
     dict = ascend(H.A11,v(1:H.A11.sz(2),:),dict);
     dict = ascend(H.A22,v(H.A11.sz(2)+1:end,:),dict);
     d1 = dict({[H.A11.A21.level,H.A11.A21.coltreeindex]});
@@ -62,16 +54,6 @@ if H.isleaf == 0
         dict({[H.A12.level,H.A12.coltreeindex]}) = {updateto2};
     else
         currd = dict({[H.level,H.coltreeindex]});
-
-        % updateto2 = H.A21.Z*(currd{1}(1:size(H.A21.lrcomponent,1)) + H.A21.lrcomponent*d1{1});
-        % updateto1 = H.A12.Z*(currd{1}(size(H.A12.lrcomponent,1)+1:end) + H.A12.lrcomponent*d2{1});
-        
-        % update = blkdiag(H.A21.Z,H.A12.Z) *(currd{1} + [H.A21.lrcomponent*d1{1};H.A12.lrcomponent*d2{1}]);
-        % updateto2 = update(1:size(H.A21.Z,1));
-        % updateto1 = update(size(H.A21.Z,1)+1:end);
-
-        % updateto2 = H.A21.Z*(currd{1}(end/2+1:end) + H.A21.lrcomponent*d1{1});
-        % updateto1 = H.A12.Z*(currd{1}(1:end/2) + H.A12.lrcomponent*d2{1});
 
         updateto1 = H.A12.Z*(currd{1}(1:size(H.A12.Z,2),:)+H.A12.lrcomponent*d2{1});
         updateto2 = H.A21.Z*(currd{1}(size(H.A12.Z,2)+1:end,:)+H.A21.lrcomponent*d1{1});

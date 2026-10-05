@@ -1,5 +1,5 @@
 function S = mp_exp_scaling(opts)
-%MP_EXP_SCALING  E3/E4 (memo 1, Section 5 and 7.5, Figures 1 and 3): time and accuracy of
+%MP_EXP_SCALING  E3/E4: time and accuracy of
 %   H\b as n grows, on manufactured problems whose minimum-norm solution is
 %   known (x* = H'z, b = H x*), so no dense matrix is ever formed at large n.
 %   For F2 it also times the dense QR minimum-norm solve and CGNE (pcg on
@@ -16,7 +16,7 @@ function S = mp_exp_scaling(opts)
 %   opts.maxcg    (default 15): largest n for the CGNE comparison
 %   opts.reps     (default 3) : timing repetitions (median), after a warm-up
 %   opts.quick    : n up to 2^12, one repetition
-%   Writes results/memo1_scaling.txt (one line per family, method and n).
+%   Writes results/scaling.txt (one line per family, method and n).
 if nargin < 1, opts = struct(); end
 if ~isfield(opts, 'maxexp'), opts.maxexp = 17; end
 if ~isfield(opts, 'maxdense'), opts.maxdense = 13; end
@@ -79,9 +79,9 @@ for f = 1:numel(fams)
 end
 S.rows = rows;
 tag = ''; if q, tag = '_quick'; end
-mp_write_table(fullfile(here, 'results', ['memo1_scaling' tag '.txt']), rows, ...
+mp_write_table(fullfile(here, 'results', ['scaling' tag '.txt']), rows, ...
     {'family', 'method', 'n', 'm', 'L', 'maxrank', 't', 't_repeat', 't_matvec', 'iters', 'res', 'err'}, ...
-    sprintf('E3/E4 scaling (memo 1): t = first H\\b (factor+solve) for ulv; blocksize %d; reps %d', bs, opts.reps));
+    sprintf('E3/E4 scaling: t = first H\\b (factor+solve) for ulv; blocksize %d; reps %d', bs, opts.reps));
 end
 
 function r = newrow(fam, method, H, G)

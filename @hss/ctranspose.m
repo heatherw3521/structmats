@@ -1,13 +1,8 @@
 function Ht = ctranspose(H)
-% CONJUGATE TRANSPOSE FOR HSS MATRIX -- the "'" operator.
-%
-% Previously unimplemented: with no ctranspose.m in this folder, H' on a
-% scalar (1x1) hss object hit MATLAB's default array-level ctranspose,
-% which is a no-op for a 1x1 object -- so H' silently returned H itself,
-% completely unchanged, rather than erroring or transposing. This mirrors
-% transpose.m (the ".'" operator) structurally, but conjugates every
-% stored numeric factor (D, Z, Y, lrcomponent) instead of merely
-% rearranging them, matching real MATLAB ' semantics.
+%CTRANSPOSE  Conjugate transpose H' of an HSS matrix.
+%   Swaps the row and column generators and conjugate-transposes every
+%   stored block (D, Z, Y, lrcomponent); the result is HSS on the
+%   transposed tree. See also transpose.
 if H.isleaf
     Ht = H;
     Ht.sz = [H.sz(2) H.sz(1)];

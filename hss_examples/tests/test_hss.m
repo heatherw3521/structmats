@@ -10,6 +10,15 @@ classdef test_hss < matlab.unittest.TestCase
 %   5. Rectangular matrices      (wide solves via the minimum-norm ULV solver)
 %   5b. Minimum-norm solve       — H \ b for wide H, stored factors,
 %                                  minnorm (weighted) and tikhonov
+%   5c. Solver on matrix families — families F1-F6 built from generators
+%                                  (hss_examples/lib), vs dense
+%   6.  full(H)
+%   7.  Indexing H(I,J)
+%   8.  Transpose H.' and H'
+%   9.  HSS x HSS multiply H1*H2
+%   10. Regressions: size/end, indexing, input checks, weight checks
+%
+% Needs hss_examples/lib (added automatically by the TestClassSetup method).
 %
 % Run everything:
 %   results = runtests('test_hss');  table(results)
@@ -21,6 +30,12 @@ classdef test_hss < matlab.unittest.TestCase
 %   runtests('test_hss', 'Tag', 'solve')
 %   runtests('test_hss', 'Tag', 'rectangular')
 %   runtests('test_hss', 'Tag', 'minnorm')
+%   runtests('test_hss', 'Tag', 'families')
+%   runtests('test_hss', 'Tag', 'full')
+%   runtests('test_hss', 'Tag', 'extract')
+%   runtests('test_hss', 'Tag', 'transpose')
+%   runtests('test_hss', 'Tag', 'matmat')
+%   runtests('test_hss', 'Tag', 'regressions')
 %
 % -----------------------------------------------------------------------
 % leafLevel reference  (bsize = 16):
@@ -96,6 +111,15 @@ classdef test_hss < matlab.unittest.TestCase
             q = [test_hss.leafrows(H.A11), test_hss.leafrows(H.A22)];
         end
 
+        function d = factorDepth(F)
+            % number of levels in a stored ULV factorization
+            d = 0;
+            while ~F.isroot
+                d = d + 1;
+                F = F.next;
+            end
+        end
+
         function Afull = dense(H)
             % Recover the dense matrix via the overloaded subsref / extract.
             Afull = H(1:size(H, 1), 1:size(H, 2));
@@ -106,6 +130,14 @@ classdef test_hss < matlab.unittest.TestCase
     % ==================================================================
     % 1. CONSTRUCTION / ASSEMBLY
     % ==================================================================
+    methods (TestClassSetup)
+        function addHelperLibrary(tc)
+            % hss_examples/lib: generators, kernels, dense references
+            lib = fullfile(fileparts(fileparts(mfilename('fullpath'))), 'lib');
+            tc.applyFixture(matlab.unittest.fixtures.PathFixture(lib));
+        end
+    end
+
     methods (Test, TestTags = {'construction'})
 
         function test_empty_constructor(tc)
@@ -285,12 +317,16 @@ classdef test_hss < matlab.unittest.TestCase
         end
 
         function test_invalid_decomp_option_errors(tc)
-            % hss_constructor's decomp branch ends in an explicit
-            % error(...) for anything but 'ID'/'oldID'/'SVD' -- confirm an
-            % unrecognized value actually reaches it rather than silently
-            % falling through to a default.
-            tc.verifyError(@() hss(tc.cauchy(tc.N_MED), blocksize = tc.BSIZE, decomp = 'bogus'), '', ...
+            % An unrecognized decomp value must error rather than silently
+            % fall through to a default.
+            tc.verifyError(@() hss(tc.cauchy(tc.N_MED), blocksize = tc.BSIZE, decomp = 'bogus'), 'hss:decomp', ...
                 'an unrecognized decomp option must error, not silently pick a default');
+        end
+
+        function test_svd_decomp_not_implemented(tc)
+            % 'SVD' is a recognized option that is not implemented yet.
+            tc.verifyError(@() hss(tc.cauchy(tc.N_MED), blocksize = tc.BSIZE, decomp = 'SVD'), ...
+                'hss:decomp:notImplemented', 'decomp=SVD must say it is not implemented');
         end
 
         function test_custom_cutrule_controls_split_point(tc)
@@ -386,14 +422,14 @@ classdef test_hss < matlab.unittest.TestCase
 
         function test_scalar_multiply_throws(tc)
             H = tc.build(tc.cauchy(tc.N_SMALL));
-            tc.verifyError(@() H * 3.0, '', ...
+            tc.verifyError(@() H * 3.0, 'hss:mtimes:scalar', ...
                 'H * scalar must throw (not yet supported)');
         end
 
         function test_left_multiply_throws(tc)
             H = tc.build(tc.cauchy(tc.N_SMALL));
-            tc.verifyError(@() randn(1, tc.N_SMALL) * H, '', ...
-                'x * H must throw (transpose not yet coded)');
+            tc.verifyError(@() randn(1, tc.N_SMALL) * H, 'hss:mtimes:left', ...
+                'x * H with a dense x must throw (not supported)');
         end
     end
 
@@ -624,9 +660,9 @@ classdef test_hss < matlab.unittest.TestCase
             n = tc.N_SMALL;
             H1 = tc.build(tc.spd(n));
             H2 = tc.build(tc.spd(n));
-            tc.verifyError(@() H1 \ H2, '', 'hss \\ hss must throw (not yet supported)');
-            tc.verifyError(@() H1 \ 3.0, '', 'hss \\ scalar must throw (not yet supported)');
-            tc.verifyError(@() tc.spd(n) \ H1, '', 'dense \\ hss must throw (inverse not yet supported)');
+            tc.verifyError(@() H1 \ H2, 'hss:mldivide:hss', 'hss \\ hss must throw (not yet supported)');
+            tc.verifyError(@() H1 \ 3.0, 'hss:mldivide:scalar', 'hss \\ scalar must throw (not yet supported)');
+            tc.verifyError(@() tc.spd(n) \ H1, 'hss:mldivide:dense', 'dense \\ hss must throw (inverse not yet supported)');
         end
     end
 
@@ -746,18 +782,15 @@ classdef test_hss < matlab.unittest.TestCase
             A = tc.cauchy(m, n);
             H = hss(A, blocksize = tc.BSIZE);
             b = randn(m, 1);
-            tc.verifyError(@() H \ b, '', ...
+            tc.verifyError(@() H \ b, 'hss:mldivide:tall', ...
                 'overdetermined H\\b must throw (not yet implemented)');
         end
 
         function test_rect_wide_solve(tc)
             % Underdetermined solve (m < n), via hss_ulvminnormsolve.
-            % NOTE: uses nestedLowRank, not cauchy() -- the ULV solver's
-            % "immediately solved" triangular sub-blocks require the
-            % diagonal/local blocks to be well-conditioned, which cauchy()
-            % does not guarantee (its diagonal blocks and even its global
-            % rank can be numerically deficient), independent of solver
-            % correctness.
+            % Uses nestedLowRank rather than cauchy(): the solver needs H to
+            % have full row rank, and cauchy() blocks can be numerically
+            % rank deficient.
             m = 32; n = 64;
             rng(1);
             A = tc.nestedLowRank(m, n, tc.BSIZE, 2);
@@ -771,21 +804,14 @@ classdef test_hss < matlab.unittest.TestCase
 
         function test_wide_solve_when_ulv_slack_short(tc)
             % A leaf pair whose slack (n_tau - m_tau = 2) is smaller than
-            % its off-diagonal rank (6). The legacy solver (now in
-            % @hss/legacy/) merged tree levels with levelup until the
-            % slack sufficed; the current one keeps min(n_tau, l_tau +
-            % m_tau) columns in its size reduction and needs no slack
-            % (memo 1, Prop. 4.8). Either way the solve must satisfy
-            % H*x = b; section 5b checks that no level is merged and that
-            % x is the minimum-norm solution.
+            % its off-diagonal rank (6). The size reduction keeps
+            % min(n_tau, l_tau + m_tau) columns, so no slack is needed;
+            % section 5b checks that no level is merged and that x is the
+            % minimum-norm solution.
             %
-            % Uses nestedLowRank (not cauchy()) and tol= (not k=) so the
-            % off-diagonal's true rank-6 structure is captured accurately
-            % rather than truncated -- forcing a rank via k= on a block
-            % that isn't actually that low-rank would make the HSS matrix
-            % itself rank-deficient, so no x would satisfy H*x = b even
-            % though the solver is fine (confirmed by hand: that variant
-            % gave relerr ~0.5, from rank(Dfull)=13 of 16).
+            % Uses tol= rather than k=: forcing rank 6 by truncation on
+            % these blocks would make H itself rank deficient, so no x
+            % would satisfy H*x = b.
             m = 16; n = 20; bs = 8; k = 6;
             rng(1);
             A = tc.nestedLowRank(m, n, bs, k);   % offdiag rank (6) exceeds leaf slack (n_tau-m_tau=2)
@@ -810,8 +836,7 @@ classdef test_hss < matlab.unittest.TestCase
     % them when it is modified), square systems, complex data, backward
     % stability on an ill-conditioned matrix, that no tree level is merged
     % when a leaf's slack is short, the named error for a rank-deficient H,
-    % and weighted minimum norm / Tikhonov with leaf-block weights. The
-    % previous solvers are in @hss/legacy/.
+    % and weighted minimum norm / Tikhonov with leaf-block weights.
     % ==================================================================
     methods (Test, TestTags = {'minnorm', 'rectangular'})
 
@@ -867,6 +892,9 @@ classdef test_hss < matlab.unittest.TestCase
                 tc.verifyLessThan(norm(X(:, j) - xj) / norm(xj), tc.TIGHT_TOL, ...
                     'H\\B must solve each column as H\\b does');
             end
+            Xr = mp_minnorm_dense(full(H), B);
+            tc.verifyLessThan(norm(X - Xr) / norm(Xr), tc.TIGHT_TOL, ...
+                'H\\B must be the minimum-norm solution of every column');
         end
 
         function test_backslash_reuses_stored_factors(tc)
@@ -878,6 +906,8 @@ classdef test_hss < matlab.unittest.TestCase
             x = H \ b;
             tc.verifyNotEmpty(H.factorcache.ulv, 'H\\b must keep its factors with H');
             tc.verifyEqual(H \ b, x, 'a second H\\b must reuse the stored factors');
+            tc.verifyEqual(tc.factorDepth(H.factorcache.ulv), H.levelcount, ...
+                'the stored factors must hold one entry per tree level');
             % the projection onto {x : H*x = b} used by Douglas-Rachford/ADMM
             v = randn(n, 1);
             Pv = v + H \ (b - H*v);
@@ -886,6 +916,10 @@ classdef test_hss < matlab.unittest.TestCase
             PPv = Pv + H \ (b - H*Pv);
             tc.verifyLessThan(norm(PPv - Pv) / norm(Pv), tc.TIGHT_TOL, ...
                 'the projection must be idempotent');
+            [Q, ~] = qr(full(H)', 0);             % P(v) - v must lie in range(H')
+            d = Pv - v;
+            tc.verifyLessThan(norm(d - Q*(Q'*d)) / norm(d), 1e-10, ...
+                'P(v) - v must be orthogonal to null(H)');
             clearfactors(H);
             tc.verifyEmpty(H.factorcache.ulv, 'clearfactors must drop the stored factors');
             tc.verifyLessThan(norm(H \ b - x) / norm(x), tc.TIGHT_TOL, ...
@@ -993,9 +1027,9 @@ classdef test_hss < matlab.unittest.TestCase
         end
 
         function test_minnorm_backward_stable_illconditioned(tc)
-            % 'valid' Gaussian blur, sigma = 2: kappa ~ 1e8. The legacy
-            % root solve pinv(D)*b left a backward error ~4e-13 here; a
-            % backward-stable solve gives ~2e-16 (memo 1, Sec. 6.4).
+            % 'valid' Gaussian blur, sigma = 2: kappa ~ 1e8. A backward-
+            % stable solve gives a backward error ~1e-16 (a root solve by
+            % pinv(D)*b gives ~4e-13 here).
             n = 300; sigma = 2; w = 10;
             g = exp(-((-w:w)/sigma).^2/2);
             m = n - 2*w;
@@ -1027,6 +1061,109 @@ classdef test_hss < matlab.unittest.TestCase
             tc.verifyEqual(size(H.A11), [12, 4], 'sanity: the first leaf must be 12 x 4');
             tc.verifyError(@() H \ randn(20, 1), 'hss_ulvminnormsolve:rankDeficient', ...
                 'rank-deficient H must raise hss_ulvminnormsolve:rankDeficient');
+        end
+    end
+
+
+    % ==================================================================
+    % 5c. SOLVER ON MATRIX FAMILIES
+    %
+    % H\b on structured matrix families, built from generators with
+    % hss_examples/lib (never through hss()): F1 low rank + block
+    % diagonal, F2 random HSS (real, complex, m/n up to 0.95, l+m > n leaves, t = 0 leaves, depth
+    % 6, square), F3 Cauchy, F4 convolution, F5 NUDFT (also with a gap on
+    % a geometry-aligned tree), F6 Toeplitz, Gaussian blur (kappa ~ 1e8).
+    % Every case checks, against the dense minimum-norm solution:
+    %   error <= max(1e-11, 100 kappa eps), backward error <= 1e-14,
+    %   one stored factor level per tree level (no merging), and that a
+    %   repeat solve from the stored factors gives the same x.
+    % Plus weighted minnorm / tikhonov with complex data and vector
+    % weights, and the improperRanks error.
+    % ==================================================================
+    methods (Test, TestTags = {'minnorm', 'families'})
+
+        function test_families_generators(tc)
+            C = {
+                'F1 LR + block diagonal, rank 3',       mp_gen_lrbd(512, 1024, 3, 16, 1)
+                'F2 random HSS, rank 10',               mp_gen_random(512, 1024, 10, 32, 2)
+                'F2 complex, rank 10',                  mp_gen_random(512, 1024, 10, 32, 3, struct('complex', true))
+                'F2 m/n=0.50, rank 16',                 mp_gen_random(512, 1024, 16, 64, 4)
+                'F2 m/n=0.90, rank 16 (slack fails)',   mp_gen_random(922, 1024, 16, 64, 4)
+                'F2 m/n=0.95, rank 16 (slack fails)',   mp_gen_random(973, 1024, 16, 64, 4)
+                'F2 16x24 leaves, rank 12 (l+m > n)',   mp_gen_random(256, 384, 12, 16, 7)
+                'F2 rank = leaf rows (t = 0)',          mp_gen_random(256, 512, 16, 16, 5)
+                'F2 depth-6 tree, rank 8',              mp_gen_random(1024, 2048, 8, 16, 6)
+                'F2 square 1024, rank 10',              mp_gen_random(1024, 1024, 10, 32, 9)
+                };
+            for c = 1:size(C, 1)
+                tc.checkFamilySolve(C{c, 1}, mp_hss_from_generators(C{c, 2}), 20 + c);
+            end
+        end
+
+        function test_families_kernels(tc)
+            K = mp_kernel_cauchy(342, 3); [L, rb, cb] = mp_tree(K.m, K.n, 32);
+            tc.checkFamilySolve('F3 interlaced Cauchy', mp_hss_from_generators(mp_hss_kernel(K, L, rb, cb, 1e-12)), 31);
+            K = mp_kernel_conv(2048, 2, 'ricker', 3); [L, rb, cb] = mp_tree(K.m, K.n, 32);
+            tc.checkFamilySolve('F4 Ricker convolution, stride 2', mp_hss_from_generators(mp_hss_kernel(K, L, rb, cb, 1e-14)), 32);
+            rng(11); x5 = sort(((0:767)' + 0.5 + 0.5*(rand(768, 1) - 0.5))/768);
+            K = mp_kernel_nudft(x5, 1024); [L, rb, cb] = mp_tree(K.m, K.n, 32);
+            tc.checkFamilySolve('F5 NUDFT Cauchy-like (slack fails)', mp_hss_from_generators(mp_hss_kernel(K, L, rb, cb, 1e-12)), 33);
+            rng(12); t6 = randn(512+1024-1, 1)/16; tcol = t6(512:-1:1); trow = t6(512:end); tcol(1) = trow(1);
+            K = mp_kernel_toeplitz(tcol, trow); [L, rb, cb] = mp_tree(512, 1024, 32);
+            tc.checkFamilySolve('F6 Toeplitz -> Cauchy-like', mp_hss_from_generators(mp_hss_kernel(K, L, rb, cb, 1e-12)), 34);
+            rng(13); xg = sort(rand(700, 1)); xg = xg(xg < 0.42 | xg > 0.52); N = 1024;
+            K = mp_kernel_nudft(xg, N); [L, rb, cb] = mp_tree_aligned(mod(-xg, 1), (0:N-1)'/N, 32);
+            tc.checkFamilySolve('F5 with a gap, geometry-aligned tree', mp_hss_from_generators(mp_hss_kernel(K, L, rb, cb, 1e-12)), 35);
+        end
+
+        function test_families_gaussian_blur(tc)
+            for sig = [1.6 2.0]
+                K = mp_kernel_conv(300, 1, 'gauss', sig, ceil(5*sig)); [L, rb, cb] = mp_tree(K.m, K.n, 16);
+                tc.checkFamilySolve(sprintf('Gaussian blur sigma=%.1f', sig), ...
+                    mp_hss_from_generators(mp_hss_kernel(K, L, rb, cb, 1e-15)), 40 + round(10*sig));
+            end
+        end
+
+        function test_weighted_tikhonov_complex_and_vectors(tc)
+            for cplx = [false true]
+                G = mp_gen_random(256, 512, 8, 32, 12, struct('complex', cplx));
+                H = mp_hss_from_generators(G);
+                A = full(H); [m, n] = size(A);
+                rng(49); b = randn(m, 2) + 1i*cplx*randn(m, 2);
+                cb = G.cb{end}; rb = G.rb{end}; nl = numel(cb) - 1;
+                w = 10.^(2*(rand(n, 1) - 0.5)); s = 1 + rand(m, 1);
+                Lb = cell(nl, 1); Sb = cell(nl, 1);
+                for i = 1:nl
+                    p = cb(i+1) - cb(i); q = rb(i+1) - rb(i);
+                    Lb{i} = 3*eye(p) + 0.5*randn(p); Sb{i} = eye(q) + 0.3*randn(q);
+                end
+                Lf = blkdiag(Lb{:}); Sf = blkdiag(Sb{:}); lam = 0.3;
+                tag = sprintf(' (complex=%d)', cplx);
+                xr = diag(1./w) * mp_minnorm_dense(A*diag(1./w), b);
+                tc.verifyLessThan(mp_rel(minnorm(H, b, 'Weight', w), xr), 1e-11, ['minnorm, vector weight' tag]);
+                xr = Lf \ mp_minnorm_dense(A/Lf, b);
+                tc.verifyLessThan(mp_rel(minnorm(H, b, 'Weight', Lb), xr), 1e-11, ['minnorm, leaf-block weight' tag]);
+                xr = [Sf*A; lam*Lf] \ [Sf*b; zeros(n, 2)];
+                [x, r] = tikhonov(H, b, lam, 'Weight', Lb, 'DataWeight', Sb);
+                tc.verifyLessThan(mp_rel(x, xr), 1e-10, ['tikhonov, leaf-block L and S' tag]);
+                tc.verifyLessThan(mp_rel(r, Sf*(A*x - b)), 1e-10, ['tikhonov residual r = S(Hx - b)' tag]);
+                xr = [diag(s)*A; lam*diag(w)] \ [diag(s)*b; zeros(n, 2)];
+                tc.verifyLessThan(mp_rel(tikhonov(H, b, lam, 'Weight', w, 'DataWeight', s), xr), 1e-10, ...
+                    ['tikhonov, vector L and S' tag]);
+            end
+        end
+
+        function test_improper_ranks_errors(tc)
+            % a leaf row basis of rank 6 on a 4-row leaf: the representation
+            % is not proper and the solver must say so
+            rng(14);
+            G = struct('L', 1, 'rb', {{[0 8], [0 4 8]}}, 'cb', {{[0 24], [0 12 24]}});
+            G.D = {randn(4, 12), randn(4, 12)};
+            G.U = {{}, {randn(4, 6), randn(4, 6)}};
+            G.V = {{}, {orth(randn(12, 6)), orth(randn(12, 6))}};
+            G.B12 = {{randn(6)}}; G.B21 = {{randn(6)}};
+            H = mp_hss_from_generators(G);
+            tc.verifyError(@() H \ randn(8, 1), 'hss_ulvminnormsolve:improperRanks');
         end
     end
 
@@ -1208,10 +1345,8 @@ classdef test_hss < matlab.unittest.TestCase
         end
 
         function test_transpose_complex_does_not_conjugate(tc)
-            % Regression: transpose.m's leaf branch used to conjugate H.D
-            % (via ') while its own odt() helper only ever plain-
-            % transposed Z/Y/lrcomponent (via .') -- consistent for real
-            % data (where ' and .' agree) but wrong for complex data.
+            % H.' must not conjugate any part of the tree (for real data
+            % ' and .' agree, so only complex data can catch this).
             n = tc.N_MED;
             A = tc.cauchy(n) + 1i*tc.cauchy(n);
             H = hss(A, blocksize = tc.BSIZE);
@@ -1527,14 +1662,13 @@ classdef test_hss < matlab.unittest.TestCase
 
 
     % ==================================================================
-    % 10. AUDIT FIXES (Oct 2026): size/end, indexing, pieces of the tree,
-    %     adaptive ID rank, constructor input checks, rank-deficient root,
-    %     weight checks. Each test names the audit bug it guards (B01..B13
-    %     in HSS_Class_Audit_and_Overload_Plan.pdf).
+    % 10. REGRESSIONS: size/end, indexing, pieces of the tree, adaptive
+    %     ID rank, constructor input checks, rank-deficient root, weight
+    %     checks.
     % ==================================================================
-    methods (Test, TestTags = {'auditfixes'})
+    methods (Test, TestTags = {'regressions'})
 
-        function test_size_method_forms(tc)                       % B01
+        function test_size_method_forms(tc)
             A = tc.cauchy(96, 64);
             H = hss(A, blocksize = tc.BSIZE);
             tc.verifyEqual(size(H), [96 64]);
@@ -1548,7 +1682,7 @@ classdef test_hss < matlab.unittest.TestCase
             tc.verifyFalse(isempty(H));
         end
 
-        function test_end_in_indexing(tc)                         % B02
+        function test_end_in_indexing(tc)
             A = tc.cauchy(tc.N_MED, 48);
             H = hss(A, blocksize = tc.BSIZE);
             tc.verifyEqual(H(end, end), A(end, end), 'AbsTol', 1e-10);
@@ -1557,7 +1691,7 @@ classdef test_hss < matlab.unittest.TestCase
             tc.verifyEqual(H(end), A(end), 'AbsTol', 1e-10);
         end
 
-        function test_index_out_of_range_errors(tc)               % B03
+        function test_index_out_of_range_errors(tc)
             n = tc.N_MED;
             H = hss(tc.cauchy(n), blocksize = tc.BSIZE);
             tc.verifyError(@() H(n+1, 1), 'hss:index:outOfRange');
@@ -1568,7 +1702,7 @@ classdef test_hss < matlab.unittest.TestCase
             tc.verifyError(@() H(1, 1, 2), 'hss:index:outOfRange');
         end
 
-        function test_index_logical_and_linear(tc)                % B04
+        function test_index_logical_and_linear(tc)
             n = tc.N_MED;
             A = tc.cauchy(n);
             H = hss(A, blocksize = tc.BSIZE);
@@ -1583,7 +1717,7 @@ classdef test_hss < matlab.unittest.TestCase
             tc.verifyEqual(size(H([], 1:3)), [0 3]);
         end
 
-        function test_tree_piece_is_refused(tc)                   % B05
+        function test_tree_piece_is_refused(tc)
             n = tc.N_MED;
             A = tc.cauchy(n);
             H = hss(A, blocksize = tc.BSIZE);
@@ -1595,7 +1729,7 @@ classdef test_hss < matlab.unittest.TestCase
             tc.verifyEqual(full(P), A(n/2+1:n, n/2+1:n), 'RelTol', 1e-8);
         end
 
-        function test_id_rank_above_sixty(tc)                     % B06
+        function test_id_rank_above_sixty(tc)
             % exact HSS with coupling rank 70: every leaf block row has rank
             % 140, above the old sketch cap (60, or 120 after redraws)
             rng(11);
@@ -1606,12 +1740,12 @@ classdef test_hss < matlab.unittest.TestCase
             tc.verifyEqual(size(H.A11.A12.Z, 2), 140);
         end
 
-        function test_cutrule_must_split_properly(tc)             % B08
+        function test_cutrule_must_split_properly(tc)
             tc.verifyError(@() hss(randn(64), blocksize = 8, cutrule = @(k) k-1), 'hss:cutrule');
             tc.verifyError(@() hss(randn(64), blocksize = 8, cutrule = @(k) k/3), 'hss:cutrule');
         end
 
-        function test_sizeA_checked(tc)                           % B09
+        function test_sizeA_checked(tc)
             A = tc.cauchy(tc.N_MED);
             tc.verifyError(@() hss(A, blocksize = tc.BSIZE, sizeA = [32 32]), 'hss:sizeA');
             % function-handle input still uses sizeA
@@ -1621,14 +1755,14 @@ classdef test_hss < matlab.unittest.TestCase
             tc.verifyError(@() hss(@(I, J) A(I, J), blocksize = tc.BSIZE), 'hss:sizeA');
         end
 
-        function test_nonfinite_input_errors(tc)                  % B13
+        function test_nonfinite_input_errors(tc)
             A = randn(tc.N_MED); A(5, 40) = NaN;
             tc.verifyError(@() hss(A, blocksize = tc.BSIZE), 'hss:nonFinite');
             A(5, 40) = Inf;
             tc.verifyError(@() hss(A, blocksize = tc.BSIZE), 'hss:nonFinite');
         end
 
-        function test_rank_deficient_root(tc)                     % B11
+        function test_rank_deficient_root(tc)
             % two equal rows in different leaves: the dependence reaches the
             % root. No solution for a generic b -> error; consistent b ->
             % warning and the minimum-norm solution.
@@ -1643,7 +1777,7 @@ classdef test_hss < matlab.unittest.TestCase
             tc.verifyLessThan(norm(x - xr) / norm(xr), 1e-10);
         end
 
-        function test_weight_checks(tc)                           % B12
+        function test_weight_checks(tc)
             rng(13);
             A = tc.nestedLowRank(256, 512, 32, 5);
             H = hss(A, blocksize = 32);
@@ -1667,6 +1801,24 @@ classdef test_hss < matlab.unittest.TestCase
     % happens to flatten to the right dense matrix.
     % ==================================================================
     methods
+        function checkFamilySolve(tc, name, H, seed)
+            % H\b vs the dense minimum-norm solution: error, backward error,
+            % one factor level per tree level, and a repeat solve from the
+            % stored factors
+            A = full(H); [m, ~] = size(A);
+            rng(seed); b = randn(m, 1);
+            if ~isreal(A), b = b + 1i*randn(m, 1); end
+            clearfactors(H);
+            x = H \ b;
+            xh = H \ b;
+            xr = mp_minnorm_dense(A, b);
+            sv = svd(A); kappa = sv(1)/sv(end);
+            tc.verifyLessThan(mp_rel(x, xr), max(1e-11, 100*kappa*eps), [name ': error vs dense min-norm']);
+            tc.verifyLessThan(norm(b - A*x)/(sv(1)*norm(x) + norm(b)), 1e-14, [name ': backward error']);
+            tc.verifyEqual(tc.factorDepth(H.factorcache.ulv), H.levelcount, [name ': no tree level merged']);
+            tc.verifyEqual(xh, x, [name ': repeat solve from the stored factors']);
+        end
+
         function verifyHssStructure(tc, H)
             % A single-leaf root (whole matrix small enough to be one
             % leaf) leaves Ir/Ic empty -- a pre-existing hss() convention,

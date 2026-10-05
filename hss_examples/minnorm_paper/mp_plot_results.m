@@ -3,7 +3,7 @@ function mp_plot_results(resdir, figdir, tag)
 if nargin < 3, tag = ''; end
 [C, MK] = mp_style();
 ld = @(name) load(fullfile(resdir, [name tag '.mat']));
-% ---------------- E2 stability (memo 1, Figure 2)
+% ---------------- E2 stability
 try
     S = ld('E2_conditioning');
     f = figure('Visible', 'off', 'Position', [100 100 900 340]);
@@ -23,7 +23,7 @@ try
     end
     mp_figsave(f, figdir, ['E2_stability' tag]);
 catch err, fprintf('E2 plot skipped: %s\n', err.message); end
-% ---------------- E3/E4 scaling (memo 1, Figures 1 and 3)
+% ---------------- E3/E4 scaling
 try
     S = ld('E3_scaling'); R = S.rows;
     fams = {'F1','F2','F3','F4','F5'};
@@ -89,7 +89,7 @@ try
     title('A3: ranks before / after the transform'); grid on
     mp_figsave(f, figdir, ['A_applications' tag]);
 catch err, fprintf('A plot skipped: %s\n', err.message); end
-% ---------------- memo 2
+% ---------------- W/T: weighted min-norm and Tikhonov
 try
     S = ld('W_T');
     f = figure('Visible', 'off', 'Position', [100 100 1100 320]);

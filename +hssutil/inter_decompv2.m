@@ -1,13 +1,16 @@
 function [Z, rows, varargout] = inter_decompv2(A, options)
-% one-sided or double-sided interpolative decomposition of matrix A
+%INTER_DECOMPV2  Deterministic interpolative decomposition (pivoted QR of
+%   the whole block); the 'oldID' option of hss. See inter_decompv3 for the
+%   randomized version used by default.
 % A = Z*A(rows,:)                 if orientation = 'rows'
 % A = A(:,rows)*Z                 if orientation = 'columns'
 % A ≈ Z*A(rows,cols)*Z2           if orientation = 'double-sided'
 %
 % INPUTS:
 %   A           : input matrix (m x n)
-%   options.ctype : 'threshold' or 'rank' (default: 'threshold')
-%   options.cval  : cutoff threshold or rank value (default: 1e-12)
+%   options.ctype : 'threshold' (relative tolerance) or anything else for a
+%                   fixed rank, e.g. 'k' (default: 'threshold')
+%   options.cval  : the tolerance or the rank (default: 1e-12)
 %   options.orientation : 'rows', 'columns', or 'double-sided'
 %
 % OUTPUTS:

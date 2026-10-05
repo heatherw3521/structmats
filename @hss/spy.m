@@ -1,10 +1,10 @@
 function spy(H)
-% visualization of rank structure of matrix
+%SPY  Picture of the HSS block structure: diagonal leaves shaded, each
+%   off-diagonal block labeled with its rank.
 
 m= H.sz(1);
 n= H.sz(2);
 
-%cutoff = floor(log2(m/H.blocksize)/2)+2;
 cutoff = H.levelcount;
 set(gca, 'YDir', 'reverse');
 
@@ -13,7 +13,6 @@ hold on
 draw_spy(H,[1,1,1],1,cutoff)
 xlim([H.Ic(1) H.Ic(2)])
 ylim([H.Ir(1) H.Ir(2)])
-%axis equal
 hold off
 
 
@@ -27,9 +26,6 @@ if H.isdiag
     leafcolor = leafcolor/2;
 end
 diagcolor = [0.1, 0.3, 0.95];
-% purple
-%textcolor = [0.4940 0.1840 0.5560];
-% dull yellow
 textcolor = [0.9290 0.6940 0.1250];
 
 top = H.Ic(1)-0.5;
@@ -53,7 +49,7 @@ elseif H.isdiag
     draw_spy(H.A21,leafcolor,yestext,cutoff)
     draw_spy(H.A22,leafcolor,yestext,cutoff)
 
-    %rank k text in offdiag blocks
+    % rank labels in the off-diagonal blocks
     if H.level == cutoff && ~H.isdiag
         rowdims = size(H.Z);
         coldims = size(H.Y);
@@ -68,7 +64,6 @@ else
     fill(xb,yb,leafcolor)
     rowdims = size(H.Z);
     coldims = size(H.Y);
-    %text(H.Ir(1)+H.sz(1)/2,H.Ic(2) + H.sz(2)/2,sprintf('%d',min(rowdims(2),coldims(1))),'Color','red','FontSize',14)
     if yestext
         text(H.Ic(1)+H.sz(2)/2,H.Ir(2)-H.sz(1)/2,sprintf('%d',min(rowdims(2),coldims(1))),'Color',textcolor,'HorizontalAlignment','center')
     end

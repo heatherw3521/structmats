@@ -1,7 +1,7 @@
 function s = extract(H, xind, yind, xshift, yshift)
-%EXTRACT 
-%xind = cell2mat(xind)
-%yind = cell2mat(yind)
+%EXTRACT  S = H(xind, yind) for global index vectors (any order, repeats
+%   allowed). xshift/yshift are the row/column offsets of H in the full
+%   matrix (0 at the root). Called by subsref after the indices are checked.
 if isempty(xind)
     s = [];
 elseif isempty(yind)
@@ -9,10 +9,8 @@ elseif isempty(yind)
 elseif H.isleaf
     if H.isdiag
         sf = H.D;
-        %s = sf(xind-H.Ir(1)+1,yind-H.Ic(1)+1);
     else
         sf = H.Z*H.lrcomponent*H.Y;
-        %s = sf(xind-H.Ir(1)+1,yind-H.Ic(1)+1);
     end
     s = sf(xind-xshift,yind-yshift);
 else
@@ -21,15 +19,9 @@ else
     cols1 = H.A11.Ic(1):H.A11.Ic(2);
     cols2 = H.A22.Ic(1):H.A22.Ic(2);
 
-    % NOTE: previously split xind/yind across quadrants with intersect(),
-    % which sorts its result ascending and drops duplicates -- unlike
-    % A(xind,yind), which preserves the caller's order and repeats. So
-    % H([5 2 8],:) silently came back sorted/deduped instead of matching
-    % A([5 2 8],:). ismember()+logical indexing below preserves xind's/
-    % yind's original order and duplicates through the split, and each
-    % quadrant's result is scattered back into its original positions in
-    % s (rather than block-concatenated), so interleaved requests that mix
-    % rows1/rows2 (or cols1/cols2) in arbitrary order still land correctly.
+    % split the requested rows/columns between the two halves with masks,
+    % so that the caller's order and repeated indices are kept, and scatter
+    % each quadrant back into its positions in s
     rmask1 = ismember(xind, rows1);
     rmask2 = ismember(xind, rows2);
     cmask1 = ismember(yind, cols1);

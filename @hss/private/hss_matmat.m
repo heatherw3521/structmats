@@ -1,9 +1,10 @@
 function H = hss_matmat(A,B)
-%HSS_MATMAT product of two HSS matrices, A*B, returned as a new HSS matrix.
+%HSS_MATMAT  Product A*B of two HSS matrices on conforming trees, returned
+%   as an HSS matrix on the same tree (off-diagonal ranks add; no
+%   truncation).
 %
-% Works at any depth. The hard part beyond levelcount<=1 is that
-% off-diagonal generators above the leaf-pair level are nested/telescoping
-% TRANSLATION matrices (mapping a child's compressed basis up to its
+% Above the leaf-pair level the off-diagonal generators are nested
+% translation matrices (mapping a child's compressed basis up to its
 % parent's), not direct compressions of the dense off-diagonal block --
 % see hss_matvec's ascend/descend for the same structure applied to a
 % vector. Multiplying two such matrices while staying in this nested form
@@ -30,14 +31,8 @@ function H = hss_matmat(A,B)
 %      [A-part,B-part] basis that the recursion below builds for every
 %      node -- embedrows/embedcols do that zero-padding.
 %
-% Setting Gin=[] throughout (the top-level call) makes step 2 a no-op and
-% the whole recursion collapses exactly to the original levelcount==1
-% formula at every leaf-pair parent -- that formula is kept below as the
-% base case docstring for reference. Verified against a dense reference
-% (real and complex, square and rectangular, levelcount up to several
-% levels deep) via a from-scratch derivation checked against random
-% synthetic HSS trees before being ported here; see hss_examples/tests for
-% the corresponding regression tests.
+% At the top-level call Gin = [], so step 2 contributes nothing there; for
+% a one-level tree the recursion reduces to the direct leaf-pair formula.
 
 if A.sz(2) ~= B.sz(1)
     error("hss_matmat:sizeMismatch", "Mismatched sizes for matrix multiplication.")
@@ -206,10 +201,9 @@ function off = buildoffdiag(c1A,c1B,c2A,c2B,Aoff,Boff,g1pair,g2pair,crossterm)
 %
 % Rank adds (no truncation): Z = [direct-A part, B-crossed part], Y =
 % [A-crossed part; direct-B part], lrcomponent = [[A's lr, crossterm];
-% [0, B's lr]] -- this is exactly the levelcount==1 formula in hss_matmat's
-% header when c1/c2 are leaves (direct = A's/B's own leaf Z/Y, crossed =
-% A11.D*B12.Z / A12.Y*B22.D, no interleaving needed since a leaf has no
-% children to interleave). When c1 or c2 is itself non-leaf, both halves
+% [0, B's lr]]. When c1/c2 are leaves this is the direct formula (direct =
+% A's/B's own leaf Z/Y, crossed = A11.D*B12.Z / A12.Y*B22.D, no
+% interleaving since a leaf has no children). When c1 or c2 is itself non-leaf, both halves
 % instead have to be produced in the SAME interleaved [A-part,B-part]
 % child ordering used everywhere else in this file (embedrows/embedcols
 % zero-pad the "direct" half into it; the "crossed" half comes out already
