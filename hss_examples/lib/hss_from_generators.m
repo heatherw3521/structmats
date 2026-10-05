@@ -1,5 +1,5 @@
-function H = mp_hss_from_generators(G)
-%MP_HSS_FROM_GENERATORS  Assemble an @hss object directly from HSS generators,
+function H = hss_from_generators(G)
+%HSS_FROM_GENERATORS  Assemble an @hss object directly from HSS generators,
 %   never forming the dense matrix.  The object has exactly the layout
 %   hss_constructor.m produces (same fields, tree indices and nested Z/Y/
 %   lrcomponent convention), so H*x, H'*x, H\b, full(H) all work unchanged.

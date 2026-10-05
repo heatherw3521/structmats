@@ -1,5 +1,5 @@
-function K = mp_kernel_nudft(xs, N)
-%MP_KERNEL_NUDFT  Family F5, Cauchy-like form of the type-II NUDFT.
+function K = kernel_nudft(xs, N)
+%KERNEL_NUDFT  Family F5, Cauchy-like form of the type-II NUDFT.
 %   A(j,k) = exp(2 pi i k x_j), k = -N/2..N/2-1, x_j in [0,1) sorted, N even.
 %   F unitary DFT, (F c)_l = sum_k c_k exp(2 pi i k l/N)/sqrt(N).  Then
 %   C = A F^* has C(j,l) = D_N(x_j - l/N)/sqrt(N),

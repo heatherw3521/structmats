@@ -1,5 +1,5 @@
-function [x,tau_hist] = ud_tr_projgrad(H,b,x0,options)
-%UD_TR_PROJGRAD  Minimum-norm solution of H*x = b by a sequence of trust-region
+function [x,tau_hist] = trust_region_minnorm(H,b,x0,options)
+%TRUST_REGION_MINNORM  Minimum-norm solution of H*x = b by a sequence of trust-region
 %   subproblems min ||H*x - b|| s.t. ||x|| <= tau, with a Newton-type update
 %   of tau. x0 must satisfy H*x0 = b. Matrix-vector products only (inner
 %   problems solved by CG); a baseline for the direct solver H\b.

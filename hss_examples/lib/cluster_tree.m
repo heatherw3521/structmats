@@ -1,6 +1,6 @@
-function [L, rb, cb] = mp_tree(m, n, blocksize)
-%MP_TREE  Row/column cluster boundaries of the tree hss_constructor.m builds.
-%   [L, rb, cb] = mp_tree(m, n, blocksize)
+function [L, rb, cb] = cluster_tree(m, n, blocksize)
+%CLUSTER_TREE  Row/column cluster boundaries of the tree hss_constructor.m builds.
+%   [L, rb, cb] = cluster_tree(m, n, blocksize)
 %   L      : leaf level (0 = single dense block)
 %   rb{l+1}: 0-based boundaries of the 2^l row clusters at level l (length 2^l+1)
 %   cb{l+1}: same for columns.

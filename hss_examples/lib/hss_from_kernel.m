@@ -1,13 +1,13 @@
-function [G, info] = mp_hss_kernel(K, L, rb, cb, tol, opts)
-%MP_HSS_KERNEL  Nested interpolative-decomposition HSS construction from entry
-%   evaluation, returning GENERATORS (feed to mp_hss_from_generators).
+function [G, info] = hss_from_kernel(K, L, rb, cb, tol, opts)
+%HSS_FROM_KERNEL  Nested interpolative-decomposition HSS construction from entry
+%   evaluation, returning GENERATORS (feed to hss_from_generators).
 %
-%   K : kernel struct (see mp_kernel_cauchy / mp_kernel_conv / mp_kernel_nudft /
-%       mp_kernel_toeplitz):  K.m, K.n, K.ent(I,J) (dense block), K.rpos, K.cpos
+%   K : kernel struct (see kernel_cauchy / kernel_conv / kernel_nudft /
+%       kernel_toeplitz):  K.m, K.n, K.ent(I,J) (dense block), K.rpos, K.cpos
 %       (complex positions, monotone along a curve), K.farr(I,zq), K.farc(zq,J)
 %       (bases for the far field through proxy points zq; [] if it vanishes),
 %       K.cyclic (unit-circle geometry), K.isreal.
-%   L, rb, cb : tree from mp_tree (0-based cluster boundaries).
+%   L, rb, cb : tree from cluster_tree (0-based cluster boundaries).
 %   opts.mode = 'proxy' (default) | 'full'
 %       'full'  : the rule of hss_constructor.m -- block rows/columns use ALL
 %                 other columns/rows (O(m n) entry evaluations).
@@ -74,7 +74,7 @@ for l = L:-1:1
                     blk = [blk, P];
                 end
             end
-            [Z, sel] = mp_id_rows(blk, tol, opts.kmax);
+            [Z, sel] = id_rows(blk, tol, opts.kmax);
             Ul{i} = Z; sr{i} = cand_r(sel);
         end
         % ---------------- column ID (interactions with rows outside I_i)
@@ -97,7 +97,7 @@ for l = L:-1:1
                 blk = [blk; P];
             end
         end
-        [Y, sel] = mp_id_cols(blk, tol, opts.kmax);
+        [Y, sel] = id_cols(blk, tol, opts.kmax);
         Vl{i} = Y'; sc{i} = cand_c(sel);
         info.maxrank = max([info.maxrank, size(Ul{i},2), size(Vl{i},2)]);
     end

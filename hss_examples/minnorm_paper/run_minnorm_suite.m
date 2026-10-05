@@ -21,7 +21,7 @@
 %   Solver regression tests: runtests('test_hss', 'Tag', 'families').
 %   No experiment forms a dense matrix above n = 2^13 (dense references are
 %   only used at moderate sizes); large cases use generator-form HSS matrices
-%   (mp_gen_*), or the O(n) proxy-point builder mp_hss_kernel.
+%   (mp_gen_*), or the O(n) proxy-point builder hss_from_kernel.
 if ~exist('opts', 'var'), opts = struct(); end
 if ~isfield(opts, 'quick'), opts.quick = false; end
 here = fileparts(mfilename('fullpath')); if isempty(here), here = pwd; end

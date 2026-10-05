@@ -1,5 +1,5 @@
-function [Ga, ix, is] = mp_gen_augment(G, lam)
-%MP_GEN_AUGMENT  Generators of the Tikhonov-augmented matrix [H, lam*I], with
+function [Ga, ix, is] = gen_augment(G, lam)
+%GEN_AUGMENT  Generators of the Tikhonov-augmented matrix [H, lam*I], with
 %   the identity columns belonging to leaf tau's rows placed right after leaf
 %   tau's own columns (a column permutation).  The result is HSS on the SAME
 %   tree with the SAME ranks:  D_tau -> [D_tau, lam*I],  V_tau -> [V_tau; 0].

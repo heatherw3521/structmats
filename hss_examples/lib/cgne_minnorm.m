@@ -1,5 +1,5 @@
-function x = ud_normeqs_pcg(H,b,options)
-%UD_NORMEQS_PCG  Minimum-norm solution of H*x = b (H wide, full row rank) by
+function x = cgne_minnorm(H,b,options)
+%CGNE_MINNORM  Minimum-norm solution of H*x = b (H wide, full row rank) by
 %   conjugate gradients on the dual normal equations H*H.'*y = b, x = H.'*y.
 %   Matrix-vector products only; a baseline for the direct solver H\b.
 

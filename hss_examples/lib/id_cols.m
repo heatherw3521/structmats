@@ -1,5 +1,5 @@
-function [Z, cols] = mp_id_cols(A, tol, kmax)
-%MP_ID_COLS  Deterministic column interpolative decomposition
+function [Z, cols] = id_cols(A, tol, kmax)
+%ID_COLS  Deterministic column interpolative decomposition
 %   A ~= A(:,cols) * Z,  Z (k x n) with Z(:,cols) = I.
 %   Rank rule: k = #{j : |R_jj| >= tol*|R_11|} of the column-pivoted QR
 %   (the same relative-threshold rule as +hssutil/inter_decompv3.m, but on A
@@ -10,7 +10,7 @@ if m == 0 || n == 0
     Z = zeros(0, n); cols = zeros(1, 0);
     return
 end
-[R, P] = mp_pivqr(A);
+[R, P] = pivqr(A);
 d = abs(diag(R));
 if isempty(d) || d(1) == 0
     k = 0;

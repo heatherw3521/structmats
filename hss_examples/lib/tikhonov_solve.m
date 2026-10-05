@@ -1,5 +1,5 @@
-function [x, r] = mp_tikhonov(H, b, lam, w, s)
-%MP_TIKHONOV  x = argmin ||S (H x - b)||^2 + lam^2 ||W x||^2,  lam > 0,
+function [x, r] = tikhonov_solve(H, b, lam, w, s)
+%TIKHONOV_SOLVE  x = argmin ||S (H x - b)||^2 + lam^2 ||W x||^2,  lam > 0,
 %   S = diag(s), W = diag(w) (pass [] for identity); H wide, square or tall.
 %   r returns the residual S(Hx - b).
 %   Thin wrapper of the method @hss/tikhonov,

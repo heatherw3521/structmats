@@ -5,10 +5,10 @@ function S = mp_exp_scaling(opts)
 %   For F2 it also times the dense QR minimum-norm solve and CGNE (pcg on
 %   H*H' with HSS products) on the same problems.
 %
-%   Each H\b is timed twice (mp_time_solve): the first solve, which factors
+%   Each H\b is timed twice (time_solve): the first solve, which factors
 %   and solves, and a repeat solve, which uses the factors H keeps.
 %   Leaves use the hss constructor's default blocksize (200) and its depth
-%   rule (mp_tree).
+%   rule (cluster_tree).
 %
 %   opts.maxexp   (default 17): largest n = 2^maxexp columns (memory grows
 %                 like n * blocksize; 2^17 needs a few GB)
@@ -35,33 +35,33 @@ for f = 1:numel(fams)
     for e = 10:opts.maxexp
         n = 2^e;
         switch fam
-            case 'F1', G = mp_gen_lrbd(n/2, n, 3, bs);
-            case 'F2', G = mp_gen_random(n/2, n, 10, bs);
+            case 'F1', G = gen_lowrank_blockdiag(n/2, n, 3, bs);
+            case 'F2', G = gen_random(n/2, n, 10, bs);
             case 'F3'
-                K = mp_kernel_cauchy(floor(n/3)+1, 3); [L, rb, cb] = mp_tree(K.m, K.n, bs);
-                G = mp_hss_kernel(K, L, rb, cb, 1e-9);
+                K = kernel_cauchy(floor(n/3)+1, 3); [L, rb, cb] = cluster_tree(K.m, K.n, bs);
+                G = hss_from_kernel(K, L, rb, cb, 1e-9);
             case 'F4'
-                K = mp_kernel_conv(n, 2, 'gauss', 2); [L, rb, cb] = mp_tree(K.m, K.n, bs);
-                G = mp_hss_kernel(K, L, rb, cb, 1e-13);
+                K = kernel_conv(n, 2, 'gauss', 2); [L, rb, cb] = cluster_tree(K.m, K.n, bs);
+                G = hss_from_kernel(K, L, rb, cb, 1e-13);
             case 'F5'
                 m = 3*n/4; xj = sort(((0:m-1)' + 0.5 + 0.5*(rand(m,1)-0.5))/m);
-                K = mp_kernel_nudft(xj, n); [L, rb, cb] = mp_tree(K.m, K.n, bs);
-                G = mp_hss_kernel(K, L, rb, cb, 1e-10);
+                K = kernel_nudft(xj, n); [L, rb, cb] = cluster_tree(K.m, K.n, bs);
+                G = hss_from_kernel(K, L, rb, cb, 1e-10);
         end
-        H = mp_hss_from_generators(G);
-        [b, xs] = mp_manufactured(H, strcmp(fam, 'F5'));
-        [t1, t2, x] = mp_time_solve(H, b, opts.reps);
-        tm = mp_timeit(@() H * xs, opts.reps, 1);
+        H = hss_from_generators(G);
+        [b, xs] = manufactured_rhs(H, strcmp(fam, 'F5'));
+        [t1, t2, x] = time_solve(H, b, opts.reps);
+        tm = time_median(@() H * xs, opts.reps, 1);
         r = newrow(fam, 'ulv', H, G);
-        r.t = t1; r.t_repeat = t2; r.t_matvec = tm; r.res = mp_rel(H*x, b); r.err = mp_rel(x, xs);
+        r.t = t1; r.t_repeat = t2; r.t_matvec = tm; r.res = relative_error(H*x, b); r.err = relative_error(x, xs);
         rows(end+1) = r; %#ok<AGROW>
         fprintf('%s n=%8d m=%8d L=%2d r=%3d  first H\\b %.3fs  repeat %.4fs  H*x %.4fs | res %.1e err %.1e\n', ...
             fam, r.n, r.m, r.L, r.maxrank, t1, t2, tm, r.res, r.err);
         if strcmp(fam, 'F2') && e <= max(opts.maxdense, opts.maxcg)
             if e <= opts.maxdense                  % dense QR of H' (forms the dense matrix)
                 A = full(H);
-                [td, ~, xd] = mp_timeit(@() mp_minnorm_dense(A, b), 1, 1);
-                r = newrow(fam, 'dense_qr', H, G); r.t = td; r.res = mp_rel(A*xd, b); r.err = mp_rel(xd, xs);
+                [td, ~, xd] = time_median(@() minnorm_dense(A, b), 1, 1);
+                r = newrow(fam, 'dense_qr', H, G); r.t = td; r.res = relative_error(A*xd, b); r.err = relative_error(xd, xs);
                 rows(end+1) = r; %#ok<AGROW>
                 clear A
                 fprintf('    dense QR %.3fs  err %.1e\n', td, r.err);
@@ -69,7 +69,7 @@ for f = 1:numel(fams)
             if e <= opts.maxcg                     % CGNE with HSS products, to relative residual 1e-12
                 Ht = H';
                 t0 = tic; [y, flag, ~, it] = pcg(@(v) H*(Ht*v), b, 1e-12, 5000); xc = Ht*y; tc = toc(t0);
-                r = newrow(fam, 'cgne', H, G); r.t = tc; r.iters = it; r.res = mp_rel(H*xc, b); r.err = mp_rel(xc, xs);
+                r = newrow(fam, 'cgne', H, G); r.t = tc; r.iters = it; r.res = relative_error(H*xc, b); r.err = relative_error(xc, xs);
                 if flag ~= 0, r.method = 'cgne_notconverged'; end
                 rows(end+1) = r; %#ok<AGROW>
                 fprintf('    CGNE %.3fs (%d its, flag %d)  err %.1e\n', tc, it, flag, r.err);

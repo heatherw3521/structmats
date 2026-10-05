@@ -35,7 +35,7 @@ if isempty(hssClassFile)
     error(['Could not locate the hss class on the path (tried adding repoRoot=%s). ' ...
         'Run this file directly (not pasted/section-by-section) so mfilename resolves correctly.'], repoRoot);
 end
-addpath(fullfile(repoRoot, 'hss_examples', 'lib'));   % baselines (ud_normeqs_pcg, ...) and test helpers
+addpath(fullfile(repoRoot, 'hss_examples', 'lib'));   % baselines (cgne_minnorm, ...) and test helpers
 
 set(groot,'defaultAxesFontSize',12);
 set(groot,'defaultAxesLineWidth',1.1);
@@ -246,10 +246,10 @@ for i = 1:numel(Ms_deep)
 end
 
 %% Part 8 -- A genuinely different solver, for comparison: matvec-only CG
-% ud_normeqs_pcg (CG on H*H', matvec-only, never full(H)) vs. direct ULV.
+% cgne_minnorm (CG on H*H', matvec-only, never full(H)) vs. direct ULV.
 % Fair comparison because this kernel is deliberately well-conditioned.
 
-fprintf('\nPart 8: same kernel -- direct ULV solve (H\\b) vs. matvec-only CG (ud_normeqs_pcg), accuracy AND timing\n');
+fprintf('\nPart 8: same kernel -- direct ULV solve (H\\b) vs. matvec-only CG (cgne_minnorm), accuracy AND timing\n');
 fprintf('%-8s %-8s %-6s %-10s %-10s %-10s %-10s\n', ...
     'M','N','levels','ULV(s)','pcg(s)','pcg/ULV','agree');
 
@@ -265,7 +265,7 @@ for i = 1:numel(Ms_pcg)
     b = randn(M, 1);
 
     tic; x_ulv = H \ b; t_ulv = toc;
-    tic; x_pcg = ud_normeqs_pcg(H, b); t_pcg = toc;
+    tic; x_pcg = cgne_minnorm(H, b); t_pcg = toc;
     agree = norm(x_ulv - x_pcg) / norm(x_ulv);
 
     fprintf('%-8d %-8d %-6d %-10.4f %-10.4f %-10.2f %-10.2e\n', ...
@@ -289,7 +289,7 @@ z = randn(M, 1);
 xtrue = H' * z;
 b = H * xtrue;
 tic; x_ulv = H \ b; t_ulv = toc;
-tic; x_pcg = ud_normeqs_pcg(H, b); t_pcg = toc;
+tic; x_pcg = cgne_minnorm(H, b); t_pcg = toc;
 
 fprintf('%-8s %-6s %-10s %-10s %-10s %-10s %-10s\n', ...
     'levels','build(s)','ULV(s)','pcg(s)','ulv_res','ulv_err','agree');
@@ -317,7 +317,7 @@ for i = 1:numel(Ms_large)
     xtrue = H' * z;
     b = H * xtrue;
     tic; x_ulv = H \ b; t_ulv = toc;
-    tic; x_pcg = ud_normeqs_pcg(H, b); t_pcg = toc;
+    tic; x_pcg = cgne_minnorm(H, b); t_pcg = toc;
 
     fprintf('%-8d %-6d %-10.2f %-10.4f %-10.4f %-10.2e %-10.2e\n', ...
         M, H.levelcount, tbuild, t_ulv, t_pcg, norm(H*x_ulv-b)/norm(b), norm(x_ulv-xtrue)/norm(xtrue));

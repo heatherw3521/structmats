@@ -1,5 +1,5 @@
-function [t, ts, out] = mp_timeit(f, reps, warmup)
-%MP_TIMEIT  Median wall time of f() over `reps` runs after `warmup` runs.
+function [t, ts, out] = time_median(f, reps, warmup)
+%TIME_MEDIAN  Median wall time of f() over `reps` runs after `warmup` runs.
 %   (Octave has no timeit; tic/toc is used for both.)  out = last output.
 if nargin < 2, reps = 3; end
 if nargin < 3, warmup = 1; end

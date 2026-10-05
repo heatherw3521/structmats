@@ -1,5 +1,5 @@
-function G = mp_gen_random(m, n, k, blocksize, seed, opts)
-%MP_GEN_RANDOM  Family F2: exact random HSS with rank k on every node.
+function G = gen_random(m, n, k, blocksize, seed, opts)
+%GEN_RANDOM  Family F2: exact random HSS with rank k on every node.
 %   D_tau iid N(0,1)/sqrt(p_tau); U, V, R, W with orthonormal columns (QR of
 %   Gaussians); B iid N(0,1)*coupling/sqrt(k).  opts.complex, opts.coupling.
 %   Never forms the dense matrix.
@@ -8,7 +8,7 @@ if ~isfield(opts, 'complex'), opts.complex = false; end
 if ~isfield(opts, 'coupling'), opts.coupling = 1; end
 if nargin >= 5 && ~isempty(seed), rng(seed); end
 g = @(a,b) randn(a,b) + 1i*opts.complex*randn(a,b);
-[L, rb, cb] = mp_tree(m, n, blocksize);
+[L, rb, cb] = cluster_tree(m, n, blocksize);
 G.L = L; G.rb = rb; G.cb = cb; G.blocksize = blocksize;
 nl = 2^L;
 G.D = cell(nl,1);

@@ -1,5 +1,5 @@
-function G = mp_gen_scale(G, s_rows, s_cols)
-%MP_GEN_SCALE  Generators of diag(s_rows) * H * diag(s_cols) (either may be []).
+function G = gen_scale(G, s_rows, s_cols)
+%GEN_SCALE  Generators of diag(s_rows) * H * diag(s_cols) (either may be []).
 %   Only the leaf generators change:  D_tau <- S_tau D_tau C_tau,
 %   U_tau <- S_tau U_tau,  V_tau <- conj(C_tau) V_tau.  Same tree, same ranks.
 L = G.L;

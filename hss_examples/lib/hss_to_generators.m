@@ -1,7 +1,7 @@
-function G = mp_hss_to_generators(H)
-%MP_HSS_TO_GENERATORS  Inverse of mp_hss_from_generators: read the generators
+function G = hss_to_generators(H)
+%HSS_TO_GENERATORS  Inverse of hss_from_generators: read the generators
 %   (D, U/R, V/W, B12, B21, cluster boundaries) out of an @hss object built by
-%   hss() or mp_hss_from_generators().  Requires a uniform-depth tree (true for
+%   hss() or hss_from_generators().  Requires a uniform-depth tree (true for
 %   everything hss_constructor.m builds).
 L = H.levelcount;
 G.L = L;

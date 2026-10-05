@@ -15,7 +15,7 @@ function H = hssp_from_gen(G)
 %   Optional: G.blocksize (stored at the root, informational).
 %
 %   Correspondence with the class:  Z = U (or R),  Y = V' (or W'),  lrcomponent = B.
-%   (Same code as hss_examples/minnorm_paper/lib/mp_hss_from_generators.m.)
+%   (Same code as hss_examples/minnorm_paper/lib/hss_from_generators.m.)
 L = G.L;
 m = G.rb{1}(end); n = G.cb{1}(end);
 H = hss();

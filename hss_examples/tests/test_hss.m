@@ -892,7 +892,7 @@ classdef test_hss < matlab.unittest.TestCase
                 tc.verifyLessThan(norm(X(:, j) - xj) / norm(xj), tc.TIGHT_TOL, ...
                     'H\\B must solve each column as H\\b does');
             end
-            Xr = mp_minnorm_dense(full(H), B);
+            Xr = minnorm_dense(full(H), B);
             tc.verifyLessThan(norm(X - Xr) / norm(Xr), tc.TIGHT_TOL, ...
                 'H\\B must be the minimum-norm solution of every column');
         end
@@ -1084,50 +1084,50 @@ classdef test_hss < matlab.unittest.TestCase
 
         function test_families_generators(tc)
             C = {
-                'F1 LR + block diagonal, rank 3',       mp_gen_lrbd(512, 1024, 3, 16, 1)
-                'F2 random HSS, rank 10',               mp_gen_random(512, 1024, 10, 32, 2)
-                'F2 complex, rank 10',                  mp_gen_random(512, 1024, 10, 32, 3, struct('complex', true))
-                'F2 m/n=0.50, rank 16',                 mp_gen_random(512, 1024, 16, 64, 4)
-                'F2 m/n=0.90, rank 16 (slack fails)',   mp_gen_random(922, 1024, 16, 64, 4)
-                'F2 m/n=0.95, rank 16 (slack fails)',   mp_gen_random(973, 1024, 16, 64, 4)
-                'F2 16x24 leaves, rank 12 (l+m > n)',   mp_gen_random(256, 384, 12, 16, 7)
-                'F2 rank = leaf rows (t = 0)',          mp_gen_random(256, 512, 16, 16, 5)
-                'F2 depth-6 tree, rank 8',              mp_gen_random(1024, 2048, 8, 16, 6)
-                'F2 square 1024, rank 10',              mp_gen_random(1024, 1024, 10, 32, 9)
+                'F1 LR + block diagonal, rank 3',       gen_lowrank_blockdiag(512, 1024, 3, 16, 1)
+                'F2 random HSS, rank 10',               gen_random(512, 1024, 10, 32, 2)
+                'F2 complex, rank 10',                  gen_random(512, 1024, 10, 32, 3, struct('complex', true))
+                'F2 m/n=0.50, rank 16',                 gen_random(512, 1024, 16, 64, 4)
+                'F2 m/n=0.90, rank 16 (slack fails)',   gen_random(922, 1024, 16, 64, 4)
+                'F2 m/n=0.95, rank 16 (slack fails)',   gen_random(973, 1024, 16, 64, 4)
+                'F2 16x24 leaves, rank 12 (l+m > n)',   gen_random(256, 384, 12, 16, 7)
+                'F2 rank = leaf rows (t = 0)',          gen_random(256, 512, 16, 16, 5)
+                'F2 depth-6 tree, rank 8',              gen_random(1024, 2048, 8, 16, 6)
+                'F2 square 1024, rank 10',              gen_random(1024, 1024, 10, 32, 9)
                 };
             for c = 1:size(C, 1)
-                tc.checkFamilySolve(C{c, 1}, mp_hss_from_generators(C{c, 2}), 20 + c);
+                tc.checkFamilySolve(C{c, 1}, hss_from_generators(C{c, 2}), 20 + c);
             end
         end
 
         function test_families_kernels(tc)
-            K = mp_kernel_cauchy(342, 3); [L, rb, cb] = mp_tree(K.m, K.n, 32);
-            tc.checkFamilySolve('F3 interlaced Cauchy', mp_hss_from_generators(mp_hss_kernel(K, L, rb, cb, 1e-12)), 31);
-            K = mp_kernel_conv(2048, 2, 'ricker', 3); [L, rb, cb] = mp_tree(K.m, K.n, 32);
-            tc.checkFamilySolve('F4 Ricker convolution, stride 2', mp_hss_from_generators(mp_hss_kernel(K, L, rb, cb, 1e-14)), 32);
+            K = kernel_cauchy(342, 3); [L, rb, cb] = cluster_tree(K.m, K.n, 32);
+            tc.checkFamilySolve('F3 interlaced Cauchy', hss_from_generators(hss_from_kernel(K, L, rb, cb, 1e-12)), 31);
+            K = kernel_conv(2048, 2, 'ricker', 3); [L, rb, cb] = cluster_tree(K.m, K.n, 32);
+            tc.checkFamilySolve('F4 Ricker convolution, stride 2', hss_from_generators(hss_from_kernel(K, L, rb, cb, 1e-14)), 32);
             rng(11); x5 = sort(((0:767)' + 0.5 + 0.5*(rand(768, 1) - 0.5))/768);
-            K = mp_kernel_nudft(x5, 1024); [L, rb, cb] = mp_tree(K.m, K.n, 32);
-            tc.checkFamilySolve('F5 NUDFT Cauchy-like (slack fails)', mp_hss_from_generators(mp_hss_kernel(K, L, rb, cb, 1e-12)), 33);
+            K = kernel_nudft(x5, 1024); [L, rb, cb] = cluster_tree(K.m, K.n, 32);
+            tc.checkFamilySolve('F5 NUDFT Cauchy-like (slack fails)', hss_from_generators(hss_from_kernel(K, L, rb, cb, 1e-12)), 33);
             rng(12); t6 = randn(512+1024-1, 1)/16; tcol = t6(512:-1:1); trow = t6(512:end); tcol(1) = trow(1);
-            K = mp_kernel_toeplitz(tcol, trow); [L, rb, cb] = mp_tree(512, 1024, 32);
-            tc.checkFamilySolve('F6 Toeplitz -> Cauchy-like', mp_hss_from_generators(mp_hss_kernel(K, L, rb, cb, 1e-12)), 34);
+            K = kernel_toeplitz(tcol, trow); [L, rb, cb] = cluster_tree(512, 1024, 32);
+            tc.checkFamilySolve('F6 Toeplitz -> Cauchy-like', hss_from_generators(hss_from_kernel(K, L, rb, cb, 1e-12)), 34);
             rng(13); xg = sort(rand(700, 1)); xg = xg(xg < 0.42 | xg > 0.52); N = 1024;
-            K = mp_kernel_nudft(xg, N); [L, rb, cb] = mp_tree_aligned(mod(-xg, 1), (0:N-1)'/N, 32);
-            tc.checkFamilySolve('F5 with a gap, geometry-aligned tree', mp_hss_from_generators(mp_hss_kernel(K, L, rb, cb, 1e-12)), 35);
+            K = kernel_nudft(xg, N); [L, rb, cb] = cluster_tree_aligned(mod(-xg, 1), (0:N-1)'/N, 32);
+            tc.checkFamilySolve('F5 with a gap, geometry-aligned tree', hss_from_generators(hss_from_kernel(K, L, rb, cb, 1e-12)), 35);
         end
 
         function test_families_gaussian_blur(tc)
             for sig = [1.6 2.0]
-                K = mp_kernel_conv(300, 1, 'gauss', sig, ceil(5*sig)); [L, rb, cb] = mp_tree(K.m, K.n, 16);
+                K = kernel_conv(300, 1, 'gauss', sig, ceil(5*sig)); [L, rb, cb] = cluster_tree(K.m, K.n, 16);
                 tc.checkFamilySolve(sprintf('Gaussian blur sigma=%.1f', sig), ...
-                    mp_hss_from_generators(mp_hss_kernel(K, L, rb, cb, 1e-15)), 40 + round(10*sig));
+                    hss_from_generators(hss_from_kernel(K, L, rb, cb, 1e-15)), 40 + round(10*sig));
             end
         end
 
         function test_weighted_tikhonov_complex_and_vectors(tc)
             for cplx = [false true]
-                G = mp_gen_random(256, 512, 8, 32, 12, struct('complex', cplx));
-                H = mp_hss_from_generators(G);
+                G = gen_random(256, 512, 8, 32, 12, struct('complex', cplx));
+                H = hss_from_generators(G);
                 A = full(H); [m, n] = size(A);
                 rng(49); b = randn(m, 2) + 1i*cplx*randn(m, 2);
                 cb = G.cb{end}; rb = G.rb{end}; nl = numel(cb) - 1;
@@ -1139,16 +1139,16 @@ classdef test_hss < matlab.unittest.TestCase
                 end
                 Lf = blkdiag(Lb{:}); Sf = blkdiag(Sb{:}); lam = 0.3;
                 tag = sprintf(' (complex=%d)', cplx);
-                xr = diag(1./w) * mp_minnorm_dense(A*diag(1./w), b);
-                tc.verifyLessThan(mp_rel(minnorm(H, b, 'Weight', w), xr), 1e-11, ['minnorm, vector weight' tag]);
-                xr = Lf \ mp_minnorm_dense(A/Lf, b);
-                tc.verifyLessThan(mp_rel(minnorm(H, b, 'Weight', Lb), xr), 1e-11, ['minnorm, leaf-block weight' tag]);
+                xr = diag(1./w) * minnorm_dense(A*diag(1./w), b);
+                tc.verifyLessThan(relative_error(minnorm(H, b, 'Weight', w), xr), 1e-11, ['minnorm, vector weight' tag]);
+                xr = Lf \ minnorm_dense(A/Lf, b);
+                tc.verifyLessThan(relative_error(minnorm(H, b, 'Weight', Lb), xr), 1e-11, ['minnorm, leaf-block weight' tag]);
                 xr = [Sf*A; lam*Lf] \ [Sf*b; zeros(n, 2)];
                 [x, r] = tikhonov(H, b, lam, 'Weight', Lb, 'DataWeight', Sb);
-                tc.verifyLessThan(mp_rel(x, xr), 1e-10, ['tikhonov, leaf-block L and S' tag]);
-                tc.verifyLessThan(mp_rel(r, Sf*(A*x - b)), 1e-10, ['tikhonov residual r = S(Hx - b)' tag]);
+                tc.verifyLessThan(relative_error(x, xr), 1e-10, ['tikhonov, leaf-block L and S' tag]);
+                tc.verifyLessThan(relative_error(r, Sf*(A*x - b)), 1e-10, ['tikhonov residual r = S(Hx - b)' tag]);
                 xr = [diag(s)*A; lam*diag(w)] \ [diag(s)*b; zeros(n, 2)];
-                tc.verifyLessThan(mp_rel(tikhonov(H, b, lam, 'Weight', w, 'DataWeight', s), xr), 1e-10, ...
+                tc.verifyLessThan(relative_error(tikhonov(H, b, lam, 'Weight', w, 'DataWeight', s), xr), 1e-10, ...
                     ['tikhonov, vector L and S' tag]);
             end
         end
@@ -1162,7 +1162,7 @@ classdef test_hss < matlab.unittest.TestCase
             G.U = {{}, {randn(4, 6), randn(4, 6)}};
             G.V = {{}, {orth(randn(12, 6)), orth(randn(12, 6))}};
             G.B12 = {{randn(6)}}; G.B21 = {{randn(6)}};
-            H = mp_hss_from_generators(G);
+            H = hss_from_generators(G);
             tc.verifyError(@() H \ randn(8, 1), 'hss_ulvminnormsolve:improperRanks');
         end
     end
@@ -1811,9 +1811,9 @@ classdef test_hss < matlab.unittest.TestCase
             clearfactors(H);
             x = H \ b;
             xh = H \ b;
-            xr = mp_minnorm_dense(A, b);
+            xr = minnorm_dense(A, b);
             sv = svd(A); kappa = sv(1)/sv(end);
-            tc.verifyLessThan(mp_rel(x, xr), max(1e-11, 100*kappa*eps), [name ': error vs dense min-norm']);
+            tc.verifyLessThan(relative_error(x, xr), max(1e-11, 100*kappa*eps), [name ': error vs dense min-norm']);
             tc.verifyLessThan(norm(b - A*x)/(sv(1)*norm(x) + norm(b)), 1e-14, [name ': backward error']);
             tc.verifyEqual(tc.factorDepth(H.factorcache.ulv), H.levelcount, [name ': no tree level merged']);
             tc.verifyEqual(xh, x, [name ': repeat solve from the stored factors']);

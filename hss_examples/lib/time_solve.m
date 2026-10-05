@@ -1,5 +1,5 @@
-function [t_first, t_repeat, x] = mp_time_solve(H, b, reps)
-%MP_TIME_SOLVE  Wall times of H\b without and with stored factors.
+function [t_first, t_repeat, x] = time_solve(H, b, reps)
+%TIME_SOLVE  Wall times of H\b without and with stored factors.
 %   H keeps its factors after a solve (@hss/hss.m), so a plain repeated
 %   timing of H\b would only measure the stored-factor solve. This times both:
 %     t_first   median over reps of  clearfactors(H); H\b   (factor + solve)

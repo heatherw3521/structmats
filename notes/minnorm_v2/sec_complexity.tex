@@ -18,8 +18,8 @@ and conjugate gradients on $HH^*$ (CGNE) costs two HSS products per iteration wi
 that grows with $\kappa(H)$.
 
 Figure~\ref{fig:complexity} shows measured times for random HSS matrices with $m=n/2$ (family F2 of
-Section~\ref{subsec:testmatrices}) and for families F1--F5, up to $n=\EfourMaxN$, at the HSS constructor's
-default leaf size (blocksize 200). The time of the first solve, which computes the factors, grows linearly
+Section~\ref{subsec:testmatrices}) and for families F1--F5, up to $n=\EfourMaxN$, with leaves of 200--400
+rows. The time of the first solve, which computes the factors, grows linearly
 in $n$ for every family (fitted exponents $\EfourSlopeMin$--$\EfourSlopeMax$ over the last four sizes), and so
 does the time of a repeat solve with the stored factors (exponents
 $\EfourSlopeRepeatMin$--$\EfourSlopeRepeatMax$). At the largest size a repeat solve is \EfourRatioRepeat{}

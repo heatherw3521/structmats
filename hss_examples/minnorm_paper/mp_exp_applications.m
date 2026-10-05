@@ -23,40 +23,40 @@ for cs = {'jitter', 'gap'}
         m2 = round(1.15*m); xs = sort(((0:m2-1)' + 0.5 + 0.5*(rand(m2,1)-0.5))/m2);
         xs = xs(xs < 0.42 | xs > 0.52); xs = xs(1:min(m, numel(xs))); m = numel(xs);
     end
-    K = mp_kernel_nudft(xs, N);
+    K = kernel_nudft(xs, N);
     fx = complex(f(xs));
-    [L, rb, cb] = mp_tree(m, N, 32);
-    [Gi, ii] = mp_hss_kernel(K, L, rb, cb, 1e-12);
-    [La, rba, cba] = mp_tree_aligned(xs, (0:N-1)'/N, 32);
-    [Ga, ia] = mp_hss_kernel(K, La, rba, cba, 1e-12);
-    Hi = mp_hss_from_generators(Gi); Ha = mp_hss_from_generators(Ga);
-    C = K.ent(1:m, 1:N); yr = mp_minnorm_dense(C, fx);
+    [L, rb, cb] = cluster_tree(m, N, 32);
+    [Gi, ii] = hss_from_kernel(K, L, rb, cb, 1e-12);
+    [La, rba, cba] = cluster_tree_aligned(xs, (0:N-1)'/N, 32);
+    [Ga, ia] = hss_from_kernel(K, La, rba, cba, 1e-12);
+    Hi = hss_from_generators(Gi); Ha = hss_from_generators(Ga);
+    C = K.ent(1:m, 1:N); yr = minnorm_dense(C, fx);
     yi = Hi \ fx; ya = Ha \ fx;
     Fu = exp(2i*pi*(0:N-1)'*k.'/N)/sqrt(N);
     cmn = Fu' * yi;
     tt = linspace(0, 1, 4000)';
     S.A1.(cs{1}) = struct('m', m, 'N', N, 'rank_index_tree', ii.maxrank, 'rank_aligned_tree', ia.maxrank, ...
-        'err_index', mp_rel(yi, yr), 'err_aligned', mp_rel(ya, yr), 'norm_c_true', norm(c), ...
+        'err_index', relative_error(yi, yr), 'err_aligned', relative_error(ya, yr), 'norm_c_true', norm(c), ...
         'norm_c_minnorm', norm(cmn), 'xs', xs, 'fx', real(fx), 'tt', tt, 'ftrue', f(tt), ...
         'fmn', real(exp(2i*pi*tt*k.')*cmn), 'slack_ok_index', mp_slack_ok(Gi));
     fprintf('A1 %-6s m=%4d N=%4d  rank: index tree %d, aligned tree %d | err %.1e / %.1e | ||c_mn|| %.3f <= ||c|| %.3f\n', ...
-        cs{1}, m, N, ii.maxrank, ia.maxrank, mp_rel(yi,yr), mp_rel(ya,yr), norm(cmn), norm(c));
+        cs{1}, m, N, ii.maxrank, ia.maxrank, relative_error(yi,yr), relative_error(ya,yr), norm(cmn), norm(c));
 end
 % ---------------- A2
 n = 2048; if q, n = 512; end
-K = mp_kernel_conv(n, 2, 'gauss', 3);
-[L, rb, cb] = mp_tree(K.m, K.n, 64);
-H = mp_hss_from_generators(mp_hss_kernel(K, L, rb, cb, 1e-14));
+K = kernel_conv(n, 2, 'gauss', 3);
+[L, rb, cb] = cluster_tree(K.m, K.n, 64);
+H = hss_from_generators(hss_from_kernel(K, L, rb, cb, 1e-14));
 t = linspace(0, 1, n)';
 x0 = exp(-((t-0.2)/0.03).^2) + 0.6*(abs(t-0.5) < 0.08) + 0.8*exp(-((t-0.78)/0.01).^2) ...
      + 0.3*sin(6*pi*t).*(t > 0.85);
-b = mp_conv_apply(K, x0);
+b = conv_apply(K, x0);
 A = K.ent(1:K.m, 1:K.n); s = svd(A);
-xmn = H \ b; xr = mp_minnorm_dense(A, b);
+xmn = H \ b; xr = minnorm_dense(A, b);
 e = 1e-3*norm(b)/sqrt(K.m)*randn(K.m,1);
 xno = H \ (b + e);
-S.A2 = struct('m', K.m, 'n', n, 'kappa', s(1)/s(end), 'err_vs_dense', mp_rel(xmn, xr), ...
-    'dist_truth_exact', mp_rel(xmn, x0), 'dist_truth_noisy', mp_rel(xno, x0), 't', t, 'x0', x0, ...
+S.A2 = struct('m', K.m, 'n', n, 'kappa', s(1)/s(end), 'err_vs_dense', relative_error(xmn, xr), ...
+    'dist_truth_exact', relative_error(xmn, x0), 'dist_truth_noisy', relative_error(xno, x0), 't', t, 'x0', x0, ...
     'xmn', xmn, 'xnoisy', xno, 'sv', s);
 fprintf('A2 deconvolution %dx%d kappa=%.1e  err vs dense %.1e | ||x_mn - x0||/||x0||: exact %.2f, 0.1%% noise %.2e\n', ...
     K.m, n, s(1)/s(end), S.A2.err_vs_dense, S.A2.dist_truth_exact, S.A2.dist_truth_noisy);
@@ -65,18 +65,18 @@ S.A3 = [];
 for e = 9:ternary_(q, 10, 13)
     n = 2^e; m = n/2;
     tv = randn(m+n-1,1)/sqrt(n); tc = tv(m:-1:1); tr = tv(m:end); tc(1) = tr(1);
-    K = mp_kernel_toeplitz(tc, tr);
-    [L, rb, cb] = mp_tree(m, n, 64);
-    [G, info] = mp_hss_kernel(K, L, rb, cb, 1e-12);
-    H = mp_hss_from_generators(G);
+    K = kernel_toeplitz(tc, tr);
+    [L, rb, cb] = cluster_tree(m, n, 64);
+    [G, info] = hss_from_kernel(K, L, rb, cb, 1e-12);
+    H = hss_from_generators(G);
     T = K.T();
-    [GT, infoT] = mp_hss_kernel(struct('m', m, 'n', n, 'ent', @(I,J) T(I,J), 'rpos', complex((1:m)'), ...
+    [GT, infoT] = hss_from_kernel(struct('m', m, 'n', n, 'ent', @(I,J) T(I,J), 'rpos', complex((1:m)'), ...
         'cpos', complex((1:n)'), 'farr', [], 'farc', [], 'cyclic', false, 'isreal', true), L, rb, cb, 1e-12, ...
         struct('mode', 'full'));
     b = randn(m,1);
     t0 = tic; x = K.back(H \ K.fwd(b)); ts = toc(t0);
     S.A3 = [S.A3, struct('m', m, 'n', n, 'rank_C', info.maxrank, 'rank_T', infoT.maxrank, ...
-        'err', mp_rel(x, mp_minnorm_dense(T, b)), 'imag_frac', norm(imag(x))/norm(x), 't_solve', ts)];
+        'err', relative_error(x, minnorm_dense(T, b)), 'imag_frac', norm(imag(x))/norm(x), 't_solve', ts)];
     fprintf('A3 Toeplitz %5dx%-5d  HSS rank of T %3d, of C %3d | err vs dense %.1e  (%.2fs)\n', ...
         m, n, infoT.maxrank, info.maxrank, S.A3(end).err, ts);
 end
@@ -97,15 +97,15 @@ for n1 = ternary_(q, [16 32], [16 32 64])
         ent = @(I,J) blur2(ri(I), rj(I), ci(J), cj(J), sig, w);
         K2 = struct('m', n2^2, 'n', n1^2, 'ent', ent, 'rpos', complex(zeros(n2^2,1)), ...
             'cpos', complex(zeros(n1^2,1)), 'farr', [], 'farc', [], 'cyclic', false, 'isreal', true);
-        [L, rb, cb] = mp_tree(K2.m, K2.n, 32);
-        [G, info] = mp_hss_kernel(K2, L, rb, cb, 1e-10, struct('mode', 'full'));
-        H = mp_hss_from_generators(G);
-        [b, xs] = mp_manufactured(H);
-        [t, ~, x] = mp_timeit(@() H \ b, 1, 0);
+        [L, rb, cb] = cluster_tree(K2.m, K2.n, 32);
+        [G, info] = hss_from_kernel(K2, L, rb, cb, 1e-10, struct('mode', 'full'));
+        H = hss_from_generators(G);
+        [b, xs] = manufactured_rhs(H);
+        [t, ~, x] = time_median(@() H \ b, 1, 0);
         S.A4 = [S.A4, struct('n1', n1, 'N', n1^2, 'order', ord{1}, 'maxrank', info.maxrank, ...
-            't', t, 'err', mp_rel(x, xs))];
+            't', t, 'err', relative_error(x, xs))];
         fprintf('A4 2-D blur %3dx%-3d (%s)  N=%5d  max HSS rank %3d  H\\b %.2fs  err %.1e\n', ...
-            n1, n1, ord{1}, n1^2, info.maxrank, t, mp_rel(x, xs));
+            n1, n1, ord{1}, n1^2, info.maxrank, t, relative_error(x, xs));
     end
 end
 end

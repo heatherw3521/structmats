@@ -2,19 +2,16 @@
 \section{Numerical Experiments}\label{sec:numerics}
 
 \subsection{Setup}\label{subsec:protocol}
-All experiments use the MATLAB implementation, through the backslash operator \texttt{H\textbackslash b} on an
-HSS object. Each subsection names the file that produces its results; the files are in
-\texttt{hss\_examples/\allowbreak minnorm\_paper} and \texttt{mp\_memo1\_run} runs all of them. The accuracy tests at
-moderate size use blocksize 16 or 32 (leaves of 16--64 rows), so that every tree has 3--7 levels; the
-timing and large-$n$ runs use the HSS constructor's default (blocksize 200). \PlatformSentence
+Each subsection names the MATLAB test file that produces its results. The accuracy tests at moderate size
+use leaves of 16--64 rows, so that every tree has 3--7 levels; the timing and large-$n$ runs use leaves of
+200--400 rows. \PlatformSentence
 
 With $x$ the computed solution, we report:
 \begin{itemize}[leftmargin=1.5em,itemsep=1pt]
 \item the residual $\|Hx-b\|/\|b\|$;
 \item the \emph{solver error} $\|x-x_{\rm ref}\|/\|x_{\rm ref}\|$, where $x_{\rm ref}$ is the dense minimum-norm
-solution of the HSS matrix itself, computed from a QR factorization $H^*=QR$ as $x_{\rm ref}=Q(R^{-*}b)$
-(the same solution as MATLAB's \texttt{lsqminnorm}). This measures the solver alone, without the
-compression error;
+solution of the HSS matrix itself, computed from a QR factorization $H^*=QR$ as $x_{\rm ref}=Q(R^{-*}b)$. This
+measures the solver alone, without the compression error;
 \item the error against the minimum-norm solution of the original matrix $A$, which adds the compression
 error;
 \item the null-space fraction $\|P_{\mathcal N(H)}x\|/\|x\|$, which is $0$ for an exact minimum-norm solution;
@@ -22,8 +19,6 @@ error;
 solution: draw $z$, set $x_\star=H^*z$ and $b=Hx_\star$. Since $x_\star\in\operatorname{Range}(H^*)$ and
 $Hx_\star=b$, $x_\star$ \emph{is} $H^+b$, and $\|x-x_\star\|/\|x_\star\|$ needs only HSS products.
 \end{itemize}
-The solver is also covered by regression tests (\texttt{mp\_test\_solver.m}) and by unit tests
-(\texttt{hss\_examples/\allowbreak tests/\allowbreak test\_hss.m}, tag \texttt{minnorm}).
 
 \subsection{Test matrices}\label{subsec:testmatrices}
 Table~\ref{tab:families} defines the families. F1 and F2 are given directly by their generators, so they
@@ -116,7 +111,7 @@ $b$ for which $x$ solves the system exactly; it stays below $\EtwoUlvBwdMax$ for
 \caption{Relative difference from the dense QR minimum-norm solution as $\kappa(H)$ grows. (a) F2$_\alpha$,
 $128\times256$, depth 3; (b) F4, Gaussian blur, stride 1, $\approx290\times300$, depth 4. Grey lines:
 $\kappa u$ and $\kappa^2u$. Missing normal-equation points: the Cholesky factorization of $HH^*$ failed.
-CGNE values of 1: \texttt{pcg} returned its starting guess $0$.}
+CGNE values of 1: no iterate had a smaller residual than the starting guess $0$, which is returned.}
 \label{fig:stab}
 \end{figure}
 

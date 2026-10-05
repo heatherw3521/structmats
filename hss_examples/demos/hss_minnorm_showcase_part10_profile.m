@@ -10,7 +10,7 @@ if isempty(hssClassFile)
     error(['Could not locate the hss class on the path (tried adding repoRoot=%s). ' ...
         'Run this file directly so mfilename resolves correctly.'], repoRoot);
 end
-addpath(fullfile(repoRoot, 'hss_examples', 'lib'));   % baselines (ud_normeqs_pcg, ...) and test helpers
+addpath(fullfile(repoRoot, 'hss_examples', 'lib'));   % baselines (cgne_minnorm, ...) and test helpers
 
 %% Part 10 -- Pushing further still: genuinely large, matrix-free throughout
 % Same sizes as hss_minnorm_showcase.m's Part 10; wrapped in the profiler.
@@ -32,7 +32,7 @@ for i = 1:numel(Ms_large)
     xtrue = H' * z;
     b = H * xtrue;
     tic; x_ulv = H \ b; t_ulv = toc;
-    tic; x_pcg = ud_normeqs_pcg(H, b); t_pcg = toc;
+    tic; x_pcg = cgne_minnorm(H, b); t_pcg = toc;
 
     fprintf('%-8d %-6d %-10.2f %-10.4f %-10.4f %-10.2e %-10.2e\n', ...
         M, H.levelcount, tbuild, t_ulv, t_pcg, norm(H*x_ulv-b)/norm(b), norm(x_ulv-xtrue)/norm(xtrue));

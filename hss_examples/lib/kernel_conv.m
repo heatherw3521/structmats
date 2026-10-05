@@ -1,5 +1,5 @@
-function K = mp_kernel_conv(n, stride, kind, sigma, w, mode)
-%MP_KERNEL_CONV  Family F4, decimated 1-D convolution (deconvolution operator)
+function K = kernel_conv(n, stride, kind, sigma, w, mode)
+%KERNEL_CONV  Family F4, decimated 1-D convolution (deconvolution operator)
 %   y_i = sum_j g(s*i + o - j) x_j,  i = 0..m-1, j = 0..n-1,
 %   g(d) = exp(-d^2/(2 sigma^2))                       (kind = 'gauss')
 %        = (1 - d^2/sigma^2) exp(-d^2/(2 sigma^2))     (kind = 'ricker')

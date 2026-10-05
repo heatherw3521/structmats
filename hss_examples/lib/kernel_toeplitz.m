@@ -1,5 +1,5 @@
-function K = mp_kernel_toeplitz(tc, tr, phi)
-%MP_KERNEL_TOEPLITZ  Family F6, Cauchy-like transform of a rectangular Toeplitz
+function K = kernel_toeplitz(tc, tr, phi)
+%KERNEL_TOEPLITZ  Family F6, Cauchy-like transform of a rectangular Toeplitz
 %   matrix T (m x n), T(i,j) = t_{i-j}, tc = T(:,1), tr = T(1,:).
 %   With Z_theta = cyclic down-shift carrying theta = e^{i phi} in its corner,
 %     Z_1^{(m)} T - T Z_theta^{(n)} = e_1 r.' + c e_n.'          (rank <= 2)

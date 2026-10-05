@@ -17,7 +17,7 @@ Solver regression tests live in `hss_examples/tests/test_hss.m`
 
 Results go to `results/*.mat`, figures to `figures/*.pdf|png` (`mp_plot_results` re-plots
 from saved results). Each experiment is also callable alone, e.g. `S = mp_exp_scaling(opts)`.
-Timings of `H\b` are taken with `mp_time_solve` (in `hss_examples/lib`), which separates the first
+Timings of `H\b` are taken with `time_solve` (in `hss_examples/lib`), which separates the first
 solve (factor and solve) from a repeat solve that uses the factors `H` keeps.
 
 ### Results as text
@@ -47,16 +47,16 @@ sizes (n up to 2^17; `mp_run_text_results('timing', struct('maxexp', 16))` for l
 
 | family | generator | dense ever formed? |
 |---|---|---|
-| F1 low rank + block diagonal | `mp_gen_lrbd` | no (generator form, O(nk)) |
-| F2 random HSS, rank k, real/complex | `mp_gen_random` | no |
-| F3 interlaced Cauchy 1/(x_i − y_j) | `mp_kernel_cauchy` + `mp_hss_kernel` | no (O(n) proxy build) |
-| F4 decimated Gaussian/Ricker convolution | `mp_kernel_conv` + `mp_hss_kernel` | no (banded) |
-| F5 NUDFT Cauchy-like (Dirichlet kernel) | `mp_kernel_nudft` + `mp_hss_kernel` | no |
-| F6 Toeplitz → Cauchy-like (unitary FFT transform) | `mp_kernel_toeplitz` + `mp_hss_kernel` | no |
+| F1 low rank + block diagonal | `gen_lowrank_blockdiag` | no (generator form, O(nk)) |
+| F2 random HSS, rank k, real/complex | `gen_random` | no |
+| F3 interlaced Cauchy 1/(x_i − y_j) | `kernel_cauchy` + `hss_from_kernel` | no (O(n) proxy build) |
+| F4 decimated Gaussian/Ricker convolution | `kernel_conv` + `hss_from_kernel` | no (banded) |
+| F5 NUDFT Cauchy-like (Dirichlet kernel) | `kernel_nudft` + `hss_from_kernel` | no |
+| F6 Toeplitz → Cauchy-like (unitary FFT transform) | `kernel_toeplitz` + `hss_from_kernel` | no |
 
 Dense matrices appear only as *references* at moderate size (n ≤ 2^13). Large-n accuracy uses
 manufactured solutions: `z ~ N(0,I)`, `x* = H'*z`, `b = H*x*`. Then `x*` is exactly the
-minimum-norm solution of the HSS system (`mp_manufactured`).
+minimum-norm solution of the HSS system (`manufactured_rhs`).
 
 ## Helpers
 

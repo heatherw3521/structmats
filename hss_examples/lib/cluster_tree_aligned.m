@@ -1,6 +1,6 @@
-function [L, rb, cb] = mp_tree_aligned(rowpos, colpos, blocksize)
-%MP_TREE_ALIGNED  Geometry-aligned tree: columns are split exactly as
-%   mp_tree splits them; each ROW cut is placed at the first row whose
+function [L, rb, cb] = cluster_tree_aligned(rowpos, colpos, blocksize)
+%CLUSTER_TREE_ALIGNED  Geometry-aligned tree: columns are split exactly as
+%   cluster_tree splits them; each ROW cut is placed at the first row whose
 %   position is >= the position of the corresponding column cut, so that the
 %   row and column clusters cover the same piece of the domain.  Positions are
 %   real and sorted (e.g. NUDFT sample points and the grid l/N).  Use this when
@@ -8,7 +8,7 @@ function [L, rb, cb] = mp_tree_aligned(rowpos, colpos, blocksize)
 %   index-based split of hss_constructor.m then misaligns row and column
 %   clusters and the off-diagonal ranks grow (used by mp_exp_applications.m).
 m = numel(rowpos); n = numel(colpos);
-[L, ~, cbt] = mp_tree(m, n, blocksize);
+[L, ~, cbt] = cluster_tree(m, n, blocksize);
 cbL = cbt{L+1};
 rbL = zeros(size(cbL));
 for i = 2:numel(cbL)-1

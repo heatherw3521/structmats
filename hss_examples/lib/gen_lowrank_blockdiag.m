@@ -1,11 +1,11 @@
-function G = mp_gen_lrbd(m, n, k, blocksize, seed)
-%MP_GEN_LRBD  Family F1: low rank plus block diagonal, in generator form.
+function G = gen_lowrank_blockdiag(m, n, k, blocksize, seed)
+%GEN_LOWRANK_BLOCKDIAG  Family F1: low rank plus block diagonal, in generator form.
 %   A = X*Y + blkdiag(E_tau),  X (m x k), Y (k x n), E_tau (leaf diagonal blocks),
 %   all entries iid U[0,1].  Off-diagonal blocks have rank exactly k at every
 %   level: U_tau = X(I_tau,:), V_tau = Y(:,J_tau).', R = W = [I;I], B = I.
-%   Never forms the dense matrix (O(n k) memory).  Tree = mp_tree(m,n,blocksize).
+%   Never forms the dense matrix (O(n k) memory).  Tree = cluster_tree(m,n,blocksize).
 if nargin >= 5, rng(seed); end
-[L, rb, cb] = mp_tree(m, n, blocksize);
+[L, rb, cb] = cluster_tree(m, n, blocksize);
 X = rand(m, k); Y = rand(k, n);
 G.L = L; G.rb = rb; G.cb = cb; G.blocksize = blocksize;
 G.X = X; G.Y = Y;   % kept for verification only (O(n k))

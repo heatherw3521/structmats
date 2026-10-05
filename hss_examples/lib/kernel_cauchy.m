@@ -1,5 +1,5 @@
-function K = mp_kernel_cauchy(M, ratio)
-%MP_KERNEL_CAUCHY  Family F3, interlaced Cauchy kernel A(i,j) = 1/(x_i - y_j):
+function K = kernel_cauchy(M, ratio)
+%KERNEL_CAUCHY  Family F3, interlaced Cauchy kernel A(i,j) = 1/(x_i - y_j):
 %   x_i = i (i = 1..M); `ratio` points y = x_i + q/(ratio+1), q = 1..ratio, in
 %   every gap  ->  N = (M-1)*ratio.  Far field: 1/(x - z_q) spans interactions with
 %   sources outside the proxy circle (Cauchy integral formula).
