@@ -4,6 +4,11 @@ function spy(H)
 
 m= H.sz(1);
 n= H.sz(2);
+if isempty(H.Ir) || isempty(H.Ic)
+    % objects saved before a single-leaf root carried its index ranges
+    H.Ir = [1 m];
+    H.Ic = [1 n];
+end
 
 cutoff = H.levelcount;
 set(gca, 'YDir', 'reverse');

@@ -42,7 +42,7 @@ function S = block(H, rows, cols)
 if isempty(rows) || isempty(cols)
     S = zeros(numel(rows), numel(cols));
 else
-    S = extract(H, rows, cols, 0, 0);
+    S = extract(H, rows, cols);
 end
 end
 

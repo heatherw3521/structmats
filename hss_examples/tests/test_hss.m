@@ -17,6 +17,7 @@ classdef test_hss < matlab.unittest.TestCase
 %   8.  Transpose H.' and H'
 %   9.  HSS x HSS multiply H1*H2
 %   10. Regressions: size/end, indexing, input checks, weight checks
+%   11. Arithmetic: -H, H1 +/- H2, compress, products, B/H, single leaf
 %
 % Needs hss_examples/lib (added automatically by the TestClassSetup method).
 %
@@ -36,6 +37,7 @@ classdef test_hss < matlab.unittest.TestCase
 %   runtests('test_hss', 'Tag', 'transpose')
 %   runtests('test_hss', 'Tag', 'matmat')
 %   runtests('test_hss', 'Tag', 'regressions')
+%   runtests('test_hss', 'Tag', 'arithmetic')
 %
 % -----------------------------------------------------------------------
 % leafLevel reference  (bsize = 16):
@@ -329,6 +331,36 @@ classdef test_hss < matlab.unittest.TestCase
                 'hss:decomp:notImplemented', 'decomp=SVD must say it is not implemented');
         end
 
+        function test_librla_decomp_options(tc)
+            % decomp = 'librla' / 'librla_range' compress with librla
+            % (github.com/agillman20/librla). Without librla on the path both
+            % must stop with hss:decomp:librlaMissing; with it, the result must
+            % match the default compression on a square and a wide matrix.
+            hasLibrla = ~isempty(which('librla'));
+            for d = {'librla', 'librla_range'}
+                if ~hasLibrla
+                    tc.verifyError(@() hss(tc.cauchy(tc.N_MED), blocksize = tc.BSIZE, decomp = d{1}), ...
+                        'hss:decomp:librlaMissing', 'missing librla must give a named error');
+                    continue
+                end
+                rng(11);
+                n = 256; x = (1:n)'/n;
+                A = 1 ./ (x + x' + 0.5) + n*eye(n);
+                H = hss(A, blocksize = tc.BSIZE, decomp = d{1});
+                v = randn(n, 1); b = randn(n, 1);
+                tc.verifyLessThan(norm(H*v - A*v)/norm(A*v), tc.TIGHT_TOL, ...
+                    sprintf('decomp=%s: square matvec', d{1}));
+                tc.verifyLessThan(norm(A*(H\b) - b)/norm(b), tc.TIGHT_TOL, ...
+                    sprintf('decomp=%s: square solve', d{1}));
+                A = tc.nestedLowRank(128, 256, tc.BSIZE, 4);
+                H = hss(A, blocksize = tc.BSIZE, tol = 1e-12, decomp = d{1});
+                b = randn(128, 1);
+                xr = pinv(A)*b;
+                tc.verifyLessThan(norm(H\b - xr)/norm(xr), tc.LOOSE_TOL, ...
+                    sprintf('decomp=%s: wide minimum-norm solve', d{1}));
+            end
+        end
+
         function test_custom_cutrule_controls_split_point(tc)
             % cutrule is otherwise only ever exercised incidentally (as a
             % way to force two HSS trees to disagree, in the matmat
@@ -420,16 +452,21 @@ classdef test_hss < matlab.unittest.TestCase
             end
         end
 
-        function test_scalar_multiply_throws(tc)
-            H = tc.build(tc.cauchy(tc.N_SMALL));
-            tc.verifyError(@() H * 3.0, 'hss:mtimes:scalar', ...
-                'H * scalar must throw (not yet supported)');
+        function test_scalar_multiply(tc)
+            A = tc.cauchy(tc.N_MED);
+            H = tc.build(A);
+            tc.verifyLessThan(norm(full(H * 3.0) - 3*A) / norm(3*A), tc.TIGHT_TOL, 'H * scalar');
+            tc.verifyLessThan(norm(full((2-1i) * H) - (2-1i)*A) / norm(A), tc.TIGHT_TOL, 'complex scalar * H');
+            tc.verifyLessThan(norm(full(H / 4) - A/4) / norm(A/4), tc.TIGHT_TOL, 'H / scalar');
         end
 
-        function test_left_multiply_throws(tc)
-            H = tc.build(tc.cauchy(tc.N_SMALL));
-            tc.verifyError(@() randn(1, tc.N_SMALL) * H, 'hss:mtimes:left', ...
-                'x * H with a dense x must throw (not supported)');
+        function test_left_multiply(tc)
+            A = tc.cauchy(tc.N_MED, 48);
+            H = tc.build(A);
+            X = randn(3, tc.N_MED);
+            tc.verifyLessThan(norm(X*H - X*A) / norm(X*A), tc.LOOSE_TOL, 'X * H with a dense X');
+            tc.verifyError(@() randn(1, 5) * H, 'hss:mtimes:dimension', 'X * H with the wrong size');
+            tc.verifyError(@() H * randn(5, 1), 'hss:mtimes:dimension', 'H * x with the wrong size');
         end
     end
 
@@ -772,18 +809,24 @@ classdef test_hss < matlab.unittest.TestCase
 
         % ---- Solve ----------------------------------------------------
 
-        function test_rect_tall_solve_errors(tc)
-            % Overdetermined solve (m > n) is explicitly unimplemented in
-            % mldivide.m (unconditional error in that size branch) --
-            % confirm it fails loudly instead of returning garbage.
-            % When implemented: replace with a residual-based check like
-            % test_rect_wide_solve's.
+        function test_rect_tall_solve_least_squares(tc)
+            % Overdetermined H\b (m > n): the least-squares solution, as the
+            % adjoint of the minimum-norm solve with H'. A repeat solve uses
+            % the stored factors of H'.
+            rng(3);
             m = 64; n = 32;
-            A = tc.cauchy(m, n);
-            H = hss(A, blocksize = tc.BSIZE);
-            b = randn(m, 1);
-            tc.verifyError(@() H \ b, 'hss:mldivide:tall', ...
-                'overdetermined H\\b must throw (not yet implemented)');
+            A = tc.nestedLowRank(n, m, tc.BSIZE, 2)';      % tall, full column rank
+            H = hss(A, blocksize = tc.BSIZE, tol = 1e-12);
+            B = randn(m, 2);
+            tc.verifyLessThan(norm(H \ B - A \ B) / norm(A \ B), tc.TIGHT_TOL, ...
+                'overdetermined H\\b must be the least-squares solution');
+            tc.verifyNotEmpty(H.factorcache.adjoint, 'H\\b for tall H must keep the factors of H''');
+            tc.verifyLessThan(norm(H \ B(:,1) - A \ B(:,1)) / norm(A \ B(:,1)), tc.TIGHT_TOL, ...
+                'repeat tall solve from the stored factors');
+            Ad = A; Ad(:, end) = Ad(:, 1);                 % two equal columns
+            Hd = hss(Ad, blocksize = tc.BSIZE, tol = 1e-12);
+            tc.verifyError(@() Hd \ B, 'hss:mldivide:rankDeficient', ...
+                'rank-deficient tall H must raise hss:mldivide:rankDeficient');
         end
 
         function test_rect_wide_solve(tc)
@@ -1668,6 +1711,20 @@ classdef test_hss < matlab.unittest.TestCase
     % ==================================================================
     methods (Test, TestTags = {'regressions'})
 
+        function test_entry_function_with_rank_zero_blocks(tc)
+            % A block-diagonal matrix given as an entry function: its
+            % off-diagonal blocks have rank 0, so there are no skeleton rows
+            % or columns, and the entry function must not be called with an
+            % empty index (x([]) - y(J).' is a size error).
+            n = 256; x = (1:n)';
+            Afun = @(I, J) double(ceil(x(I)/32) == ceil(x(J)/32).') .* (2 + 1 ./ (1 + abs(x(I) - x(J).')));
+            A = Afun(1:n, 1:n);
+            H = hss(Afun, sizeA = [n n], blocksize = 32);
+            v = randn(n, 1);
+            tc.verifyLessThan(norm(H*v - A*v) / norm(A*v), tc.TIGHT_TOL, ...
+                'entry function with rank-0 off-diagonal blocks');
+        end
+
         function test_size_method_forms(tc)
             A = tc.cauchy(96, 64);
             H = hss(A, blocksize = tc.BSIZE);
@@ -1788,6 +1845,114 @@ classdef test_hss < matlab.unittest.TestCase
             w = ones(512, 1); w(7) = NaN;
             tc.verifyError(@() minnorm(H, b, Weight = w), 'hss:weight:nonFinite');
             tc.verifyError(@() tikhonov(H, b, 0.1, DataWeight = [NaN; ones(255, 1)]), 'hss:weight:nonFinite');
+        end
+    end
+
+
+    % ==================================================================
+    % 11. ARITHMETIC AND RECOMPRESSION: -H, H1 +/- H2, compress, products
+    %     with recompression, B/H, spy and solves on a single-leaf H.
+    % ==================================================================
+    methods (Test, TestTags = {'arithmetic'})
+
+        function test_unary_minus_plus(tc)
+            A = tc.cauchy(tc.N_MED);
+            H = tc.build(A);
+            tc.verifyLessThan(norm(full(-H) + A) / norm(A), tc.TIGHT_TOL, '-H');
+            tc.verifyLessThan(norm(full(+H) - A) / norm(A), tc.TIGHT_TOL, '+H');
+        end
+
+        function test_plus_minus(tc)
+            rng(5);
+            n = 128; x = (1:n)'/n;
+            A = 1 ./ (x + x' + 0.5) + n*eye(n);
+            B = 1 ./ (x + x' + 1.5).^2 + 1i*randn(n, 3)*randn(3, n)/n;
+            H1 = tc.build(A); H2 = tc.build(B);
+            S = H1 + H2; D = H1 - H2;
+            tc.verifyLessThan(norm(full(S) - (A + B)) / norm(A + B), tc.LOOSE_TOL, 'H1 + H2');
+            tc.verifyLessThan(norm(full(D) - (A - B)) / norm(A - B), tc.LOOSE_TOL, 'H1 - H2');
+            G = hss_to_generators(S); G1 = hss_to_generators(H1); G2 = hss_to_generators(H2);
+            r = @(G) max(cellfun(@(u) size(u, 2), G.U{end}));
+            tc.verifyLessThanOrEqual(r(G), r(G1) + r(G2), 'the sum must be recompressed');
+            tc.verifyError(@() H1 + A, 'hss:plus:operand', 'H + dense must error');
+            tc.verifyError(@() H1 - 2, 'hss:minus:operand', 'H - scalar must error');
+            tc.verifyError(@() H1 + hss(A, blocksize = 32), 'hss:plus:tree', ...
+                'H1 + H2 on different trees must error');
+        end
+
+        function test_product_recompressed(tc)
+            % (H*H)*H: without recompression the leaf ranks add up and pass
+            % the leaf size, so H^3\b failed with improperRanks.
+            n = 256; x = (1:n)'/n;
+            A = 1 ./ (x + x' + 0.5) + n*eye(n);
+            H = tc.build(A);
+            P = (H*H)*H;
+            A3 = A^3;
+            tc.verifyLessThan(norm(full(P) - A3) / norm(A3), tc.LOOSE_TOL, 'H^3');
+            G = hss_to_generators(P); G1 = hss_to_generators(H);
+            r = @(G) max(cellfun(@(u) size(u, 2), G.U{end}));
+            tc.verifyLessThanOrEqual(r(G), r(G1) + 2, 'H^3 must be recompressed');
+            b = randn(n, 1);
+            tc.verifyLessThan(norm(P \ b - A3 \ b) / norm(A3 \ b), tc.LOOSE_TOL, 'H^3 \\ b');
+        end
+
+        function test_compress_tolerance(tc)
+            A = tc.cauchy(tc.N_MED);
+            H = tc.build(A);
+            tc.verifyLessThan(norm(full(compress(H)) - A) / norm(A), tc.TIGHT_TOL, 'compress(H)');
+            Hc = compress(H, 1e-6);
+            tc.verifyLessThan(norm(full(Hc) - A) / norm(A), 1e-5, 'compress(H, 1e-6)');
+            tc.verifyError(@() compress(H, 2), 'hss:compress:tol', 'tol outside [0, 1) must error');
+        end
+
+        function test_compress_absolute_and_normest(tc)
+            % normest matches norm(full(H)); compress(., 'absolute') bounds
+            % the error relative to ||H||, and with the operands' scale it
+            % removes the roundoff left by cancellation (H - H has rank 0).
+            n = 256; x = (1:n)'/n;
+            A = 1 ./ (x + x' + 0.5) + n*eye(n) + 1i ./ (x + x' + 2);
+            H = tc.build(A);
+            nA = norm(A);
+            tc.verifyLessThan(abs(normest(H) - nA) / nA, 1e-5, 'normest(H)');
+            Ha = compress(H, 1e-8, 'absolute');
+            tc.verifyLessThan(norm(full(Ha) - A) / nA, 1e-6, 'compress(H, 1e-8, ''absolute'')');
+            D = compress(H - H, 1e-12, 'absolute', normest(H));
+            G = hss_to_generators(D);
+            tc.verifyEqual(max(cellfun(@(u) size(u, 2), G.U{end})), 0, ...
+                'H - H recompressed with the operands'' scale must have rank 0');
+            tc.verifyError(@() compress(H, 1e-12, 'bogus'), 'hss:compress:mode', 'unknown mode');
+        end
+
+        function test_mrdivide(tc)
+            rng(6);
+            n = 128; x = (1:n)'/n;
+            A = 1 ./ (x + x' + 0.5) + n*eye(n);
+            H = tc.build(A);
+            X = randn(3, n);
+            tc.verifyLessThan(norm(X/H - X/A) / norm(X/A), tc.TIGHT_TOL, 'B/H, square H');
+            Aw = tc.nestedLowRank(64, 128, tc.BSIZE, 2);
+            Hw = hss(Aw, blocksize = tc.BSIZE, tol = 1e-12);
+            Bw = randn(2, 128);
+            tc.verifyLessThan(norm(Bw/Hw - Bw*pinv(Aw)) / norm(Bw*pinv(Aw)), tc.TIGHT_TOL, ...
+                'B/H, wide H: least squares');
+            Ht = Hw'; Bt = randn(2, 64);
+            tc.verifyLessThan(norm(Bt/Ht - Bt*pinv(Aw')) / norm(Bt*pinv(Aw')), tc.TIGHT_TOL, ...
+                'B/H, tall H: minimum norm');
+            tc.verifyError(@() randn(2, 5)/H, 'hss:mrdivide:dimension', 'B/H with the wrong size');
+        end
+
+        function test_single_leaf_root(tc)
+            % A matrix smaller than the blocksize is one leaf: it must carry
+            % its index ranges (spy), and a 1-row H must accept a scalar b.
+            A = tc.cauchy(20);
+            H = hss(A, blocksize = 32);
+            tc.verifyEqual(H.Ir, [1 20], 'leaf root Ir');
+            tc.verifyEqual(H.Ic, [1 20], 'leaf root Ic');
+            f = figure('Visible', 'off'); c = onCleanup(@() close(f));
+            spy(H);
+            H1 = hss(randn(1, 50), blocksize = 16);
+            x = H1 \ 3;
+            tc.verifyLessThan(abs(full(H1)*x - 3), tc.TIGHT_TOL, '1-row H \\ scalar');
         end
     end
 

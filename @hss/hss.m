@@ -5,11 +5,14 @@ classdef hss
     %   nested interpolative decompositions. Options: 'blocksize' (leaf
     %   size, default 200), 'tol' (relative ID tolerance, default 1e-12),
     %   'k' (fixed rank instead of a tolerance), 'cutrule', 'decomp'
-    %   ('ID' default, 'oldID'; 'SVD' planned).
+    %   ('ID' default, 'oldID', 'librla', 'librla_range'; 'SVD' planned).
+    %   The 'librla' options need librla (github.com/agillman20/librla).
     %
-    %   Supported: H*X, H1*H2, H\b (square or minimum-norm wide solve,
-    %   factors kept with H), minnorm, tikhonov, H', H.', H(I,J), full,
-    %   size, end, spy, clearfactors.
+    %   Supported: H*X, X*H, s*H, H/s, -H, H1+H2, H1-H2, H1*H2 (sums and
+    %   products are recompressed; see compress), H\b (square solve,
+    %   minimum-norm wide solve, least-squares tall solve; factors kept
+    %   with H), B/H, minnorm, tikhonov, H', H.', H(I,J), full, size, end,
+    %   compress, normest, spy, clearfactors.
     %
     %   The matrix is stored as a binary tree: every node holds its four
     %   blocks A11, A12, A21, A22; diagonal leaves hold dense blocks D, and

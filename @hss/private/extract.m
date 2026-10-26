@@ -1,52 +1,98 @@
-function s = extract(H, xind, yind, xshift, yshift)
-%EXTRACT  S = H(xind, yind) for global index vectors (any order, repeats
-%   allowed). xshift/yshift are the row/column offsets of H in the full
-%   matrix (0 at the root). Called by subsref after the indices are checked.
-if isempty(xind)
-    s = [];
-elseif isempty(yind)
-    s = [];
-elseif H.isleaf
-    if H.isdiag
-        sf = H.D;
-    else
-        sf = H.Z*H.lrcomponent*H.Y;
-    end
-    s = sf(xind-xshift,yind-yshift);
-else
-    rows1 = H.A11.Ir(1):H.A11.Ir(2);
-    rows2 = H.A22.Ir(1):H.A22.Ir(2);
-    cols1 = H.A11.Ic(1):H.A11.Ic(2);
-    cols2 = H.A22.Ic(1):H.A22.Ic(2);
-
-    % split the requested rows/columns between the two halves with masks,
-    % so that the caller's order and repeated indices are kept, and scatter
-    % each quadrant back into its positions in s
-    rmask1 = ismember(xind, rows1);
-    rmask2 = ismember(xind, rows2);
-    cmask1 = ismember(yind, cols1);
-    cmask2 = ismember(yind, cols2);
-
-    s = zeros(numel(xind), numel(yind));
-
-    if any(rmask1) && any(cmask1)
-        s(rmask1, cmask1) = extract(H.A11, xind(rmask1), yind(cmask1), xshift, yshift);
-    end
-
-    if any(rmask1) && any(cmask2)
-        s12f = blockbuilder(H.A12,H);
-        s(rmask1, cmask2) = s12f(xind(rmask1)-xshift, yind(cmask2)-H.A11.Ic(2));
-    end
-
-    if any(rmask2) && any(cmask1)
-        s21f = blockbuilder(H.A21,H);
-        s(rmask2, cmask1) = s21f(xind(rmask2)-H.A11.Ir(2), yind(cmask1)-yshift);
-    end
-
-    if any(rmask2) && any(cmask2)
-        s(rmask2, cmask2) = extract(H.A22, xind(rmask2), yind(cmask2), H.A11.Ir(2), H.A11.Ic(2));
-    end
-
+function S = extract(H, I, J)
+%EXTRACT  S = H(I, J) for global index vectors I, J (any order, repeats
+%   allowed) without forming any off-diagonal block. Called by subsref after
+%   the indices are checked.
+%
+%   Every off-diagonal block is Ubig * B * Ybig, with nested bases: the row
+%   basis of a cluster is blkdiag(row bases of its two children) times a
+%   translation matrix, down to the leaf bases. Only the rows of the row
+%   bases at I and the columns of the column bases at J are computed, bottom
+%   up through the tree, so the cost is O((|I| + |J|) r log n + |I| |J| r)
+%   instead of O(n^2) for a single entry.
+I = I(:); J = J(:);
+if H.isleaf                  % a single-leaf root: just the dense block
+    S = H.D(I, J);
+    return
+end
+S = node(H, I, J);
 end
 
+
+function [S, Lr, Rc] = node(D, I, J)
+% D: diagonal node; I, J: global indices inside D.
+% S  = D(I, J)
+% Lr = rows I of blkdiag(Ubig of D's two children)      (|I| x (ka + kc))
+% Rc = columns J of blkdiag(Ybig of D's two children)   ((ka + kc) x |J|)
+% (Lr, Rc are used by D's parent to form D's own bases; empty for a leaf.)
+if D.isleaf
+    S = D.D(I - D.Ir(1) + 1, J - D.Ic(1) + 1);
+    Lr = []; Rc = [];
+    return
+end
+if isempty(I) && isempty(J)              % nothing requested below D
+    S = zeros(0, 0);
+    Lr = zeros(0, size(D.A12.Z, 2) + size(D.A21.Z, 2));
+    Rc = zeros(size(D.A21.Y, 1) + size(D.A12.Y, 1), 0);
+    return
+end
+a = D.A11; c = D.A22;
+ia = I <= a.Ir(2); ic = ~ia;              % rows in the first / second child
+ja = J <= a.Ic(2); jc = ~ja;              % columns likewise
+
+[Sa, Lra, Rca] = node(a, I(ia), J(ja));
+[Sc, Lrc, Rcc] = node(c, I(ic), J(jc));
+
+% bases of the two children restricted to the requested rows / columns:
+%   rows of a use D.A12.Z (translation, or the leaf basis at the leaf level),
+%   rows of c use D.A21.Z; columns of a use D.A21.Y, columns of c D.A12.Y
+Ua = rowbasis(a, I(ia), Lra, D.A12.Z);
+Uc = rowbasis(c, I(ic), Lrc, D.A21.Z);
+Ya = colbasis(a, J(ja), Rca, D.A21.Y);
+Yc = colbasis(c, J(jc), Rcc, D.A12.Y);
+
+S = zeros(numel(I), numel(J), 'like', Sa);
+S(ia, ja) = Sa;
+S(ic, jc) = Sc;
+if any(ia) && any(jc)
+    S(ia, jc) = Ua * D.A12.lrcomponent * Yc;
+end
+if any(ic) && any(ja)
+    S(ic, ja) = Uc * D.A21.lrcomponent * Ya;
+end
+
+if nargout > 1
+    ka = size(D.A12.Z, 2); kc = size(D.A21.Z, 2);
+    Lr = zeros(numel(I), ka + kc, 'like', S);
+    Lr(ia, 1:ka) = Ua;
+    Lr(ic, ka+1:end) = Uc;
+    la = size(D.A21.Y, 1); lc = size(D.A12.Y, 1);
+    Rc = zeros(la + lc, numel(J), 'like', S);
+    Rc(1:la, ja) = Ya;
+    Rc(la+1:end, jc) = Yc;
+end
+end
+
+
+function U = rowbasis(child, I, Lr, Z)
+% rows I of the child's row basis: the leaf basis Z itself at a leaf,
+% otherwise blkdiag(grandchildren bases)(I,:) * translation Z
+if isempty(I)
+    U = zeros(0, size(Z, 2), 'like', Z);
+elseif child.isleaf
+    U = Z(I - child.Ir(1) + 1, :);
+else
+    U = Lr * Z;
+end
+end
+
+
+function Y = colbasis(child, J, Rc, Ym)
+% columns J of the child's column basis (stored as Y = V')
+if isempty(J)
+    Y = zeros(size(Ym, 1), 0, 'like', Ym);
+elseif child.isleaf
+    Y = Ym(:, J - child.Ic(1) + 1);
+else
+    Y = Ym * Rc;
+end
 end

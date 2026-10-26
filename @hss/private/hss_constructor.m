@@ -17,11 +17,12 @@ function H = hss_constructor(H,A,options)
         options.k = 0
 
         % compression of the off-diagonal blocks: 'ID' (randomized,
-        % hssutil.inter_decompv3), 'oldID' (hssutil.inter_decompv2), or
-        % 'SVD' (planned, not implemented yet)
+        % hssutil.inter_decompv3), 'oldID' (hssutil.inter_decompv2),
+        % 'librla' or 'librla_range' (hssutil.id_librla; needs librla on
+        % the path), or 'SVD' (planned, not implemented yet)
         options.decomp = 'ID'
 
-        % passed to hssutil.inter_decompv3; see its header
+        % passed to hssutil.inter_decompv3 / hssutil.id_librla; see their headers
         options.powerits = 0
         options.escalatemargin = 10
         options.escalatepowerits = 1
@@ -78,13 +79,13 @@ function H = hss_constructor(H,A,options)
         H.A21 = [];
         H.A12 = [];
         H.sz = options.sizeA;
-        H.Ir = [];
-        H.Ic = [];
-        H.blocksize = [];
+        H.Ir = [1, options.sizeA(1)];
+        H.Ic = [1, options.sizeA(2)];
+        H.blocksize = blocksize;
         H.levelcount = 0;
         H.level = 0;
-        H.rowtreeindex = [];
-        H.coltreeindex = [];
+        H.rowtreeindex = 1;
+        H.coltreeindex = 1;
         H.isleaf = 1;
         H.isdiag = 1;
         H.isroot = 1;
@@ -116,10 +117,20 @@ function H = hss_constructor(H,A,options)
             escalatepowerits = options.escalatepowerits);
     elseif strcmp(options.decomp, 'oldID')
         decomp = @hssutil.inter_decompv2;
+    elseif strcmp(options.decomp, 'librla') || strcmp(options.decomp, 'librla_range')
+        if isempty(which('librla'))
+            error('hss:decomp:librlaMissing', ['decomp ''%s'' needs librla on the path: ' ...
+                'get https://github.com/agillman20/librla and addpath its distrib/matlab folder.'], options.decomp);
+        end
+        variant = 'id';
+        if strcmp(options.decomp, 'librla_range'), variant = 'range'; end
+        decomp = @(A, varargin) hssutil.id_librla(A, varargin{:}, 'variant', variant, ...
+            'powerits', options.powerits, 'escalatemargin', options.escalatemargin, ...
+            'escalatepowerits', options.escalatepowerits);
     elseif strcmp(options.decomp, 'SVD')
         error('hss:decomp:notImplemented', "decomp 'SVD' is not implemented yet; use 'ID' or 'oldID'.")
     else
-        error('hss:decomp', "decomp must be 'ID', 'oldID' or 'SVD'.")
+        error('hss:decomp', "decomp must be 'ID', 'oldID', 'librla', 'librla_range' or 'SVD'.")
     end
 
 
@@ -274,7 +285,7 @@ function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = offdiagcons
             H.lowrankrows = rows{1};
         else
             % row ID of the block row: A(rows,:) = Z * A(skeleton rows,:)
-            [z,rows] = decomp(A(H.Ir(1):H.Ir(2),[1:othercols(1)-1,othercols(2)+1:sizeA(2)]),ctype = cutofftype,cval = cutoffval, orientation = 'rows');
+            [z,rows] = decomp(blockof(A,H.Ir(1):H.Ir(2),[1:othercols(1)-1,othercols(2)+1:sizeA(2)]),ctype = cutofftype,cval = cutoffval, orientation = 'rows');
             H.Z = z;
             rowfactorDict({[H.level,H.rowtreeindex]}) = {z};
 
@@ -290,7 +301,7 @@ function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = offdiagcons
             cols = colindexDict({[H.level,H.coltreeindex]});
             H.lowrankcols = cols{1};
         else
-            [y,cols] = decomp(A([1:otherrows(1)-1,otherrows(2)+1:sizeA(1)],H.Ic(1):H.Ic(2)),ctype = cutofftype,cval = cutoffval, orientation = 'columns');
+            [y,cols] = decomp(blockof(A,[1:otherrows(1)-1,otherrows(2)+1:sizeA(1)],H.Ic(1):H.Ic(2)),ctype = cutofftype,cval = cutoffval, orientation = 'columns');
             H.Y = y;
             colfactorDict({[H.level,H.coltreeindex]}) = {y};
 
@@ -298,14 +309,14 @@ function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = offdiagcons
             colindexDict({[H.level,H.coltreeindex]}) = {cols+H.Ic(1)-1};
         end
         % coupling matrix: the skeleton submatrix
-        H.lrcomponent = A(H.lowrankrows,H.lowrankcols);
+        H.lrcomponent = blockof(A,H.lowrankrows,H.lowrankcols);
 
     else
         % above the leaves: IDs of the children's skeleton rows/columns
         rows1 = rowindexDict({[H.level+1,2*H.rowtreeindex-1]});
         rows2 = rowindexDict({[H.level+1,2*H.rowtreeindex]});
 
-        [z,rows] = decomp(A([rows1{1},rows2{1}],[1:othercols(1)-1,othercols(2)+1:sizeA(2)]),ctype = cutofftype,cval = cutoffval, orientation = 'rows');
+        [z,rows] = decomp(blockof(A,[rows1{1},rows2{1}],[1:othercols(1)-1,othercols(2)+1:sizeA(2)]),ctype = cutofftype,cval = cutoffval, orientation = 'rows');
         H.Z = z;          % row translation matrix
         rowfactorDict({[H.level,H.rowtreeindex]}) = {z};
 
@@ -316,7 +327,7 @@ function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = offdiagcons
         cols1 = colindexDict({[H.level+1,2*H.coltreeindex-1]});
         cols2 = colindexDict({[H.level+1,2*H.coltreeindex]});
 
-        [y,cols] = decomp(A([1:otherrows(1)-1,otherrows(2)+1:sizeA(1)],[cols1{1},cols2{1}]),ctype = cutofftype,cval = cutoffval, orientation = 'columns');
+        [y,cols] = decomp(blockof(A,[1:otherrows(1)-1,otherrows(2)+1:sizeA(1)],[cols1{1},cols2{1}]),ctype = cutofftype,cval = cutoffval, orientation = 'columns');
 
         H.Y = y;          % column translation matrix
         colfactorDict({[H.level,H.coltreeindex]}) = {y};
@@ -324,7 +335,18 @@ function [H,rowfactorDict,rowindexDict,colfactorDict,colindexDict] = offdiagcons
         oldcols = [cols1{1},cols2{1}];
         H.lowrankcols = oldcols(cols);
         colindexDict({[H.level,H.coltreeindex]}) = {H.lowrankcols};
-        H.lrcomponent = A(H.lowrankrows,H.lowrankcols);
+        H.lrcomponent = blockof(A,H.lowrankrows,H.lowrankcols);
+    end
+end
+
+function B = blockof(A, I, J)
+    % A(I,J); an empty I or J gives an empty block without calling A, so an
+    % entry function never sees an empty index (a rank-0 block has no
+    % skeleton rows or columns)
+    if isempty(I) || isempty(J)
+        B = zeros(numel(I), numel(J));
+    else
+        B = A(I, J);
     end
 end
 
