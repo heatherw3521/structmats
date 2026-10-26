@@ -4,7 +4,7 @@
 # internal testing and benchmark scripts (not part of the package)
 /internal/
 
-# min-norm research material (memos, talks, experiments, results): kept locally, not published
+# local working material, not part of the package
 /notes/
 /HSS_*.pdf
 /hss_examples/minnorm_paper/

@@ -6,7 +6,7 @@ function [L, rb, cb] = cluster_tree_aligned(rowpos, colpos, blocksize)
 %   real and sorted (e.g. NUDFT sample points and the grid l/N).  Use this when
 %   the sampling density is far from uniform (gaps, variable density): the
 %   index-based split of hss_constructor.m then misaligns row and column
-%   clusters and the off-diagonal ranks grow (used by mp_exp_applications.m).
+%   clusters and the off-diagonal ranks grow.
 m = numel(rowpos); n = numel(colpos);
 [L, ~, cbt] = cluster_tree(m, n, blocksize);
 cbL = cbt{L+1};

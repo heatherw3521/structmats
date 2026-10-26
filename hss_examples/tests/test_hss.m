@@ -1711,6 +1711,22 @@ classdef test_hss < matlab.unittest.TestCase
     % ==================================================================
     methods (Test, TestTags = {'regressions'})
 
+        function test_sparsesign_structure(tc)
+            % hssutil.sparsesign (compiled where available, MATLAB file
+            % otherwise): zeta nonzeros +-1/sqrt(zeta) per column in distinct
+            % rows, zeta capped at the number of rows.
+            for c = {[20 500 8], [6 200 8], [300 2000 8]}
+                a = c{1};
+                S = hssutil.sparsesign(a(1), a(2), a(3));
+                z = min(a(3), a(1));
+                [~, ~, v] = find(S);
+                tc.verifyEqual(size(S), a(1:2), 'sparsesign size');
+                tc.verifyEqual(full(sum(S ~= 0, 1)), z*ones(1, a(2)), ...
+                    'zeta distinct nonzeros in every column');
+                tc.verifyLessThan(max(abs(abs(v) - 1/sqrt(z))), 1e-15, 'entries +-1/sqrt(zeta)');
+            end
+        end
+
         function test_entry_function_with_rank_zero_blocks(tc)
             % A block-diagonal matrix given as an entry function: its
             % off-diagonal blocks have rank 0, so there are no skeleton rows
